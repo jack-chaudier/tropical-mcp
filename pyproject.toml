@@ -1,0 +1,58 @@
+[project]
+name = "tropical-mcp"
+version = "0.1.0"
+description = "FastMCP server for L2 tropical-algebra context compaction"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Jack Chaudier" }]
+dependencies = [
+  "mcp[cli]>=1.2.0",
+  "tiktoken>=0.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/jack-chaudier/tropical-mcp"
+Repository = "https://github.com/jack-chaudier/tropical-mcp"
+Issues = "https://github.com/jack-chaudier/tropical-mcp/issues"
+
+[project.scripts]
+tropical-mcp = "tropical_mcp.server:main"
+tropical-mcp-replay = "tropical_mcp.benchmark_harness:main"
+tropical-mcp-full-validate = "tropical_mcp.validation:main"
+
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tropical_mcp"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/tropical_mcp/*.py",
+  "scripts/*.py",
+  "scripts/*.sh",
+  "tests/*.py",
+  "README.md",
+  "LICENSE",
+  "pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]

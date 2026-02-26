@@ -1,0 +1,17 @@
+# Python runtime
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+
+# Local tooling
+.claude/
+
+# Generated benchmark artifacts
+artifacts/
