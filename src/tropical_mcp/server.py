@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+import datetime
+import json
 import logging
 import math
+import os
 import sys
-from typing import Any, cast
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
 from .algebra import ChunkState, L2Summary, l2_scan
 from .compactor import evict_l2_guarded, evict_recency, token_count
 from .tagger import tag_chunk_detailed
+
 
 # IMPORTANT: stdout is reserved for MCP JSON-RPC transport.
 logging.basicConfig(
@@ -22,6 +26,66 @@ logging.basicConfig(
 log = logging.getLogger("tropical-mcp")
 
 mcp = FastMCP("tropical-mcp")
+
+# ---------------------------------------------------------------------------
+# Auto-telemetry: every tool call logs its own result automatically.
+# Eliminates the need for manual `echo >> telemetry.jsonl` Bash calls.
+# ---------------------------------------------------------------------------
+
+_TELEMETRY_PATH = os.path.expanduser("~/.claude/compactor-telemetry.jsonl")
+
+
+def _log_telemetry(tool_name: str, result: dict[str, Any] | list) -> None:
+    """Append a telemetry record for every tool invocation."""
+    try:
+        # Extract k_max_feasible from various result shapes
+        k_max_feasible = None
+        pivot_id = None
+        predecessor_count = 0
+
+        if isinstance(result, dict):
+            k_max_feasible = result.get("k_max_feasible")
+            # Nested in audit for compact/compact_auto
+            audit = result.get("audit")
+            if audit and isinstance(audit, dict):
+                k_max_feasible = k_max_feasible or audit.get("k_max_feasible")
+                pivot_id = audit.get("baseline_pivot_id") or audit.get("pivot_id")
+                protected = audit.get("protected_ids", [])
+                predecessor_count = max(0, len(protected) - 1) if protected else 0
+            # Direct fields for inspect/inspect_horizon
+            if pivot_id is None:
+                pivot_id = result.get("pivot_id")
+            if k_max_feasible is not None and predecessor_count == 0:
+                # For inspect_horizon, count from feasible slots
+                slots = result.get("slots", [])
+                if slots and k_max_feasible is not None:
+                    for slot in slots:
+                        if slot.get("k") == k_max_feasible:
+                            predecessor_count = len(slot.get("predecessor_ids", []))
+                            if pivot_id is None:
+                                pivot_id = slot.get("pivot_id")
+                            break
+        elif isinstance(result, list):
+            # tag returns a list — count roles
+            pivots = [r for r in result if isinstance(r, dict) and r.get("role") == "pivot"]
+            preds = [r for r in result if isinstance(r, dict) and r.get("role") == "predecessor"]
+            predecessor_count = len(preds)
+            if pivots:
+                pivot_id = pivots[0].get("id")
+
+        record = {
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z"),
+            "tool": tool_name,
+            "k_max_feasible": k_max_feasible,
+            "pivot_id": pivot_id,
+            "predecessor_count": predecessor_count,
+            "auto": True,  # Distinguishes server-generated from manual entries
+        }
+        os.makedirs(os.path.dirname(_TELEMETRY_PATH), exist_ok=True)
+        with open(_TELEMETRY_PATH, "a") as f:
+            f.write(json.dumps(record) + "\n")
+    except Exception:
+        pass  # Telemetry must never break tool execution
 
 
 def _message_text(msg: dict[str, Any]) -> str:
@@ -97,9 +161,68 @@ def messages_to_chunks(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return chunks
 
 
-def chunks_to_algebra_states(chunks: list[dict[str, Any]], k: int) -> list[ChunkState]:
-    """Map normalized chunks into L2 `ChunkState` values."""
+def _semantic_reorder(chunks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Reorder chunks so predecessors precede the pivot for L2 scan.
 
+    The L2 algebra requires predecessors *before* the pivot in scan order
+    (W[j] lifts when an incoming pivot consumes j left-predecessors).  In real
+    conversations the user often states the task first and adds constraints
+    later, so predecessors appear *after* the pivot chronologically.
+
+    Strategy: find the highest-weight pivot.  Any predecessors that appear
+    *after* it in the original sequence are relocated to just before it.
+    Predecessors already before the pivot stay in place.  This handles the
+    conversation pattern (pivot first, constraints later) without breaking
+    the specification pattern (constraints listed, then pivot) or multi-arc
+    benchmarks where each arc has its own predecessor→pivot ordering.
+    """
+
+    # Find highest-weight pivot index.
+    best_pivot_idx: int | None = None
+    best_weight = -float("inf")
+    for i, c in enumerate(chunks):
+        if c["role"] == "pivot" and c["weight"] > best_weight:
+            best_weight = c["weight"]
+            best_pivot_idx = i
+
+    if best_pivot_idx is None:
+        return chunks  # No pivot found; nothing to reorder.
+
+    # Find the last pivot position in the original sequence.
+    last_pivot_idx = max(i for i, c in enumerate(chunks) if c["role"] == "pivot")
+
+    # Only move predecessors that appear AFTER the best pivot AND have no
+    # pivot after them in the original sequence.  A predecessor with a pivot
+    # to its right is already "serving" that later pivot and should stay put.
+    post_preds: list[dict[str, Any]] = []
+    remaining: list[dict[str, Any]] = []
+    for i, c in enumerate(chunks):
+        if (
+            i > best_pivot_idx
+            and c["role"] == "predecessor"
+            and i > last_pivot_idx
+        ):
+            post_preds.append(c)
+        else:
+            remaining.append(c)
+
+    if not post_preds:
+        return chunks  # All predecessors already before a pivot; no change needed.
+
+    # Insert the orphaned predecessors just before the best pivot.
+    pivot_pos = next(i for i, c in enumerate(remaining) if c is chunks[best_pivot_idx])
+    result = remaining[:pivot_pos] + post_preds + remaining[pivot_pos:]
+    return result
+
+
+def chunks_to_algebra_states(chunks: list[dict[str, Any]], k: int) -> list[ChunkState]:
+    """Map normalized chunks into L2 `ChunkState` values.
+
+    Applies semantic reordering so that predecessors precede the pivot in the
+    scan, regardless of their chronological position in the conversation.
+    """
+
+    ordered = _semantic_reorder(chunks)
     return [
         ChunkState(
             chunk_id=str(chunk["id"]),
@@ -107,7 +230,7 @@ def chunks_to_algebra_states(chunks: list[dict[str, Any]], k: int) -> list[Chunk
             d_total=1 if chunk["role"] == "predecessor" else 0,
             text=str(chunk["text"]),
         )
-        for chunk in chunks
+        for chunk in ordered
     ]
 
 
@@ -411,7 +534,9 @@ def compact(
         )
 
     surviving_originals = [chunk["original"] for chunk in kept]
-    return {"messages": surviving_originals, "audit": audit}
+    result = {"messages": surviving_originals, "audit": audit}
+    _log_telemetry("compact", result)
+    return result
 
 
 @mcp.tool()
@@ -433,8 +558,13 @@ def inspect(messages: list[dict[str, Any]], k: int = 3) -> dict[str, Any]:
 
     W_display = [round(w, 4) if math.isfinite(w) else None for w in summary.W]
 
-    return {
+    # Also compute k_max_feasible for consistency (#5)
+    token_by_id = {str(chunk["id"]): int(chunk["token_count"]) for chunk in chunks}
+    _, k_max_f = _horizon_from_summary(l2_scan(chunks_to_algebra_states(chunks, k), k), token_by_id=token_by_id)
+
+    result = {
         "feasible": feasible,
+        "k_max_feasible": k_max_f,
         "protected_ids": sorted(prot_ids),
         "pivot_id": (prov.pivot_id if prov is not None else None),
         "predecessor_ids": (prov.pred_ids if prov is not None else []),
@@ -450,6 +580,8 @@ def inspect(messages: list[dict[str, Any]], k: int = 3) -> dict[str, Any]:
             for chunk in chunks
         ],
     }
+    _log_telemetry("inspect", result)
+    return result
 
 
 @mcp.tool()
@@ -469,7 +601,7 @@ def inspect_horizon(messages: list[dict[str, Any]], k_max: int = 8) -> dict[str,
     token_by_id = {str(chunk["id"]): int(chunk["token_count"]) for chunk in chunks}
     slots, k_max_feasible = _horizon_from_summary(summary, token_by_id=token_by_id)
 
-    return {
+    result = {
         "k_max": k_max,
         "k_max_feasible": k_max_feasible,
         "feasible_slots": [slot["k"] for slot in slots if slot["feasible"]],
@@ -486,6 +618,8 @@ def inspect_horizon(messages: list[dict[str, Any]], k_max: int = 8) -> dict[str,
             for chunk in chunks
         ],
     }
+    _log_telemetry("inspect_horizon", result)
+    return result
 
 
 @mcp.tool()
@@ -516,7 +650,7 @@ def compact_auto(
 
     horizon = inspect_horizon(messages, k_max=k_target)
     if "error" in horizon:
-        return cast(dict[str, Any], horizon)
+        return horizon
 
     slots = list(horizon["slots"])
     feasible_slots = list(horizon["feasible_slots"])
@@ -572,7 +706,7 @@ def compact_auto(
         }
 
     if "error" in out:
-        return cast(dict[str, Any], out)
+        return out
 
     out_audit = out.get("audit", {})
     out_audit["policy_requested"] = "auto"
@@ -584,7 +718,8 @@ def compact_auto(
     out_audit["feasible_slots"] = feasible_slots
     out_audit["k_max_feasible"] = horizon["k_max_feasible"]
     out["audit"] = out_audit
-    return cast(dict[str, Any], out)
+    _log_telemetry("compact_auto", out)
+    return out
 
 
 @mcp.tool()
@@ -654,7 +789,7 @@ def retention_floor(
     current_pi0_estimate = min(1.0, (k / n_pred)) if n_pred > 0 else 1.0
     current_horizon_failure_estimate = 1.0 - (1.0 - current_pi0_estimate) ** horizon
 
-    return {
+    rf_result = {
         "k": k,
         "horizon": horizon,
         "failure_prob_target": failure_prob,
@@ -677,10 +812,12 @@ def retention_floor(
             "exact_contract_token_floor is exact for current tagged/provenanced context only."
         ),
     }
+    _log_telemetry("retention_floor", rf_result)
+    return rf_result
 
 
 @mcp.tool()
-def tag(messages: list[dict[str, Any]]) -> list[dict[str, Any]] | dict[str, str]:
+def tag(messages: list[dict[str, Any]]) -> dict[str, Any] | dict[str, str]:
     """Tag messages by inferred role and pivot weight, without compacting."""
 
     try:
@@ -688,7 +825,14 @@ def tag(messages: list[dict[str, Any]]) -> list[dict[str, Any]] | dict[str, str]
     except ValueError as exc:
         return _invalid(str(exc))
 
-    return [
+    # Also compute k_max_feasible so callers don't need a separate inspect call
+    k_max = min(8, len(chunks))
+    states = chunks_to_algebra_states(chunks, k_max)
+    summary = l2_scan(states, k_max)
+    token_by_id = {str(chunk["id"]): int(chunk["token_count"]) for chunk in chunks}
+    _, k_max_feasible = _horizon_from_summary(summary, token_by_id=token_by_id)
+
+    tagged_list = [
         {
             "id": chunk["id"],
             "role": chunk["role"],
@@ -700,6 +844,56 @@ def tag(messages: list[dict[str, Any]]) -> list[dict[str, Any]] | dict[str, str]
         }
         for chunk in chunks
     ]
+
+    result: dict[str, Any] = {
+        "result": tagged_list,
+        "k_max_feasible": k_max_feasible,
+    }
+    _log_telemetry("tag", result)
+    return result
+
+
+@mcp.tool()
+def diagnose(messages: list[dict[str, Any]], k_max: int = 8) -> dict[str, Any]:
+    """Tag messages and inspect feasibility in one call.
+
+    Combines tag + inspect_horizon into a single round trip.
+    Use this at session start to initialize the compactor with minimal overhead.
+    """
+
+    try:
+        chunks = messages_to_chunks(messages)
+    except ValueError as exc:
+        return _invalid(str(exc))
+
+    states = chunks_to_algebra_states(chunks, k_max)
+    summary = l2_scan(states, k_max)
+    token_by_id = {str(chunk["id"]): int(chunk["token_count"]) for chunk in chunks}
+    slots, k_max_feasible = _horizon_from_summary(summary, token_by_id=token_by_id)
+
+    tagged_list = [
+        {
+            "id": chunk["id"],
+            "role": chunk["role"],
+            "weight": (round(chunk["weight"], 4) if math.isfinite(chunk["weight"]) else None),
+            "confidence": round(float(chunk["confidence"]), 4),
+            "reasons": chunk["reasons"],
+            "token_count": chunk["token_count"],
+            "text_preview": chunk["text"][:120],
+        }
+        for chunk in chunks
+    ]
+
+    result = {
+        "tagged_chunks": tagged_list,
+        "k_max": k_max,
+        "k_max_feasible": k_max_feasible,
+        "feasible_slots": [slot["k"] for slot in slots if slot["feasible"]],
+        "slots": slots,
+        "W": [round(w, 4) if math.isfinite(w) else None for w in summary.W],
+    }
+    _log_telemetry("diagnose", result)
+    return result
 
 
 def main() -> None:
