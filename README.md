@@ -2,7 +2,9 @@
 
 Production MCP server for **L2 tropical-algebra context compaction**.
 
-It protects structurally load-bearing conversation chunks (pivot + `k` predecessors) during context eviction so important constraints survive token pressure.
+This project addresses a long-context reliability failure mode: agents can remain "answer-valid" while silently switching the governing task intent under naive memory compression (the validity mirage).
+`tropical-mcp` enforces a structural guard so load-bearing chunks (pivot + `k` predecessors) survive eviction when feasible, and emits auditable diagnostics when they cannot.
+It is designed as a drop-in stdio MCP server for Claude Code, Codex, and similar tool-calling agents.
 
 ## Features
 
