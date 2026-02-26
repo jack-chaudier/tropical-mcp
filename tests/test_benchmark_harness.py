@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from tropical_mcp.benchmark_harness import DEFAULT_LAYOUTS, build_variant_messages, run_replay, summarize_rows
+from tropical_mcp.benchmark_harness import (
+    DEFAULT_LAYOUTS,
+    build_variant_messages,
+    run_replay,
+    summarize_rows,
+)
 
 
 def test_build_variant_messages_has_expected_shape() -> None:

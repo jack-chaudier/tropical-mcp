@@ -5,14 +5,13 @@ from __future__ import annotations
 import logging
 import math
 import sys
-from typing import Any
+from typing import Any, cast
 
 from mcp.server.fastmcp import FastMCP
 
 from .algebra import ChunkState, L2Summary, l2_scan
 from .compactor import evict_l2_guarded, evict_recency, token_count
 from .tagger import tag_chunk_detailed
-
 
 # IMPORTANT: stdout is reserved for MCP JSON-RPC transport.
 logging.basicConfig(
@@ -517,7 +516,7 @@ def compact_auto(
 
     horizon = inspect_horizon(messages, k_max=k_target)
     if "error" in horizon:
-        return horizon
+        return cast(dict[str, Any], horizon)
 
     slots = list(horizon["slots"])
     feasible_slots = list(horizon["feasible_slots"])
@@ -573,7 +572,7 @@ def compact_auto(
         }
 
     if "error" in out:
-        return out
+        return cast(dict[str, Any], out)
 
     out_audit = out.get("audit", {})
     out_audit["policy_requested"] = "auto"
@@ -585,7 +584,7 @@ def compact_auto(
     out_audit["feasible_slots"] = feasible_slots
     out_audit["k_max_feasible"] = horizon["k_max_feasible"]
     out["audit"] = out_audit
-    return out
+    return cast(dict[str, Any], out)
 
 
 @mcp.tool()

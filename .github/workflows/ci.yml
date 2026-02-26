@@ -6,7 +6,36 @@ on:
   pull_request:
 
 jobs:
-  test:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Lint
+        run: uv run --extra dev ruff check .
+
+      - name: Type check
+        run: uv run --extra dev mypy src/tropical_mcp
+
+      - name: Run tests
+        run: uv run --extra dev pytest -q
+
+      - name: Build package
+        run: uv build
+
+      - name: Functional validation
+        run: uv run tropical-mcp-full-validate
+
+  compatibility:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -26,6 +55,3 @@ jobs:
 
       - name: Run tests
         run: uv run --extra dev pytest -q
-
-      - name: Build package
-        run: uv build

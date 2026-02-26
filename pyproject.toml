@@ -5,7 +5,7 @@ description = "FastMCP server for L2 tropical-algebra context compaction"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
-authors = [{ name = "Jack Chaudier" }]
+authors = [{ name = "Jack Chaudier Gaffney", email = "jackchaudier@gmail.com" }]
 dependencies = [
   "mcp[cli]>=1.2.0",
   "tiktoken>=0.7.0",
@@ -14,6 +14,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.8.0",
+  "mypy>=1.12.0",
 ]
 
 [project.urls]
@@ -56,3 +59,12 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src/tropical_mcp"]
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_ignores = true
+check_untyped_defs = true
+no_implicit_optional = true

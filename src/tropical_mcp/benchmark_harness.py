@@ -6,13 +6,13 @@ import argparse
 import csv
 import hashlib
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .compactor import token_count
 from .server import compact
-
 
 DECOY_LINES = {"W1": 156, "W2": 162, "W3": 168, "P": 175}
 

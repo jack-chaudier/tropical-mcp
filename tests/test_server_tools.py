@@ -1,8 +1,15 @@
 from __future__ import annotations
 
 from tropical_mcp.compactor import token_count
-from tropical_mcp.server import compact, compact_auto, inspect, inspect_horizon, messages_to_chunks, retention_floor, tag
-
+from tropical_mcp.server import (
+    compact,
+    compact_auto,
+    inspect,
+    inspect_horizon,
+    messages_to_chunks,
+    retention_floor,
+    tag,
+)
 
 MESSAGES = [
     {"id": "m1", "text": "Constraint: must preserve API contract."},

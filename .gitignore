@@ -12,6 +12,7 @@ dist/
 
 # Local tooling
 .claude/
+pennytree/
 
 # Generated benchmark artifacts
 artifacts/

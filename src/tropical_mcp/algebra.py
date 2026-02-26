@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Optional
 
 
 def _validate_k(k: int) -> None:
@@ -42,11 +41,11 @@ class L2Summary:
     k: int
     d_total: int
     W: list[float]
-    provenance: list[Optional[Provenance]]
+    provenance: list[Provenance | None]
     predecessor_tail: list[str]
 
     @classmethod
-    def identity(cls, k: int) -> "L2Summary":
+    def identity(cls, k: int) -> L2Summary:
         _validate_k(k)
         return cls(
             k=k,
@@ -57,10 +56,10 @@ class L2Summary:
         )
 
     @classmethod
-    def from_chunk(cls, chunk: ChunkState, k: int) -> "L2Summary":
+    def from_chunk(cls, chunk: ChunkState, k: int) -> L2Summary:
         _validate_k(k)
         W = [-math.inf] * (k + 1)
-        prov: list[Optional[Provenance]] = [None] * (k + 1)
+        prov: list[Provenance | None] = [None] * (k + 1)
 
         if math.isfinite(chunk.weight):
             W[0] = chunk.weight
@@ -96,7 +95,7 @@ def compose(prev: L2Summary, incoming: L2Summary, k: int) -> L2Summary:
 
     new_d = min(k, prev.d_total + incoming.d_total)
     new_W = [-math.inf] * (k + 1)
-    new_prov: list[Optional[Provenance]] = [None] * (k + 1)
+    new_prov: list[Provenance | None] = [None] * (k + 1)
 
     for j in range(k + 1):
         # Option A: winner lives in previous block.
@@ -107,7 +106,7 @@ def compose(prev: L2Summary, incoming: L2Summary, k: int) -> L2Summary:
         idx = max(0, j - prev.d_total)
         w_b = incoming.W[idx]
         prov_b_base = incoming.provenance[idx]
-        prov_b: Optional[Provenance] = None
+        prov_b: Provenance | None = None
 
         if math.isfinite(w_b) and prov_b_base is not None:
             needed_from_left = j - idx

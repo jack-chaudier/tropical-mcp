@@ -6,6 +6,8 @@ This project addresses a long-context reliability failure mode: agents can remai
 `tropical-mcp` enforces a structural guard so load-bearing chunks (pivot + `k` predecessors) survive eviction when feasible, and emits auditable diagnostics when they cannot.
 It is designed as a drop-in stdio MCP server for Claude Code, Codex, and similar tool-calling agents.
 
+Public research showcase (papers + demo + artifacts): <https://github.com/jack-chaudier/dreams>
+
 ## Features
 
 - `compact(messages, token_budget, policy, k)`
@@ -52,6 +54,8 @@ uv pip install -e .[dev]
 ## Test + Validate
 
 ```bash
+uv run --extra dev ruff check .
+uv run --extra dev mypy src/tropical_mcp
 uv run --extra dev pytest -q
 uv build
 uv run tropical-mcp-full-validate
@@ -107,3 +111,10 @@ uv run tropical-mcp-replay \
 ## Transport Safety
 
 `stdout` is reserved for MCP JSON-RPC transport. Logging is sent only to `stderr`.
+
+## Project Signals
+
+- CI on push/PR (lint, type-check, tests, build, functional validation)
+- Security policy: [`SECURITY.md`](./SECURITY.md)
+- Contribution guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
+- Version history: [`CHANGELOG.md`](./CHANGELOG.md)

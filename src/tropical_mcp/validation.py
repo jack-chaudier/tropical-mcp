@@ -11,7 +11,6 @@ from pathlib import Path
 
 from .server import compact, compact_auto, inspect, inspect_horizon, retention_floor
 
-
 ROOT = Path(__file__).resolve().parents[2]
 
 

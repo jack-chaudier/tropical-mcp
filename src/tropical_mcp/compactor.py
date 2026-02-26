@@ -6,7 +6,6 @@ from typing import Any
 
 import tiktoken
 
-
 _ENC = tiktoken.get_encoding("cl100k_base")
 
 
