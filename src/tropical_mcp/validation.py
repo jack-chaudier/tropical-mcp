@@ -9,6 +9,7 @@ import sys
 import time
 from pathlib import Path
 
+from .golden import capture_policy_invariance_snapshot, fixture_k3
 from .server import compact, compact_auto, inspect, inspect_horizon, retention_floor
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,41 +20,8 @@ def _assert(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
-def _fixture_k3() -> list[dict[str, str]]:
-    return [
-        {"id": "n1", "role": "user", "text": "n01 casual note", "role_hint": "noise"},
-        {"id": "n2", "role": "assistant", "text": "n02 casual response", "role_hint": "noise"},
-        {"id": "c1", "role": "user", "text": "Must use SQLite only.", "role_hint": "predecessor"},
-        {"id": "c2", "role": "user", "text": "Must keep /api/v1 routes.", "role_hint": "predecessor"},
-        {"id": "c3", "role": "user", "text": "Must include audit_log table.", "role_hint": "predecessor"},
-        {"id": "c4", "role": "user", "text": "Must not store plaintext passwords.", "role_hint": "predecessor"},
-        {
-            "id": "c5",
-            "role": "user",
-            "text": "Must include regression tests for login and refresh.",
-            "role_hint": "predecessor",
-        },
-        {
-            "id": "pivot",
-            "role": "assistant",
-            "text": "Understood all constraints. I will now build the app step by step.",
-            "role_hint": "pivot",
-        },
-        {"id": "f1", "role": "user", "text": "n03 filler", "role_hint": "noise"},
-        {"id": "f2", "role": "user", "text": "n04 filler", "role_hint": "noise"},
-        {"id": "f3", "role": "user", "text": "n05 filler", "role_hint": "noise"},
-        {"id": "qa", "role": "user", "text": "Run final QA now.", "role_hint": "noise"},
-        {
-            "id": "summary",
-            "role": "assistant",
-            "text": "Final QA complete. All constraints verified.",
-            "role_hint": "noise",
-        },
-    ]
-
-
 def _run_policy_comparison() -> dict[str, object]:
-    messages = _fixture_k3()
+    messages = fixture_k3()
     horizon = inspect_horizon(messages, k_max=5)
     _assert("error" not in horizon, f"inspect_horizon failed: {horizon}")
     _assert(horizon["k_max_feasible"] is not None, "k horizon should be feasible for fixture")
@@ -105,7 +73,7 @@ def _run_policy_comparison() -> dict[str, object]:
 
 
 def _run_auto_and_floor_checks() -> dict[str, object]:
-    messages = _fixture_k3()
+    messages = fixture_k3()
     auto = compact_auto(messages, token_budget=120, k_target=5, mode="adaptive")
     _assert("error" not in auto, f"compact_auto failed: {auto}")
     _assert(auto["audit"]["policy_selected"] == "l2_guarded", "auto should select l2_guarded")
@@ -144,10 +112,19 @@ def _stdio_smoke() -> dict[str, object]:
     return {"alive_for_1s": alive, "returncode": proc.returncode}
 
 
+def _policy_invariance_gate() -> dict[str, object]:
+    expected_path = ROOT / "fixtures" / "policy_invariance.json"
+    expected = json.loads(expected_path.read_text(encoding="utf-8"))
+    actual = capture_policy_invariance_snapshot()
+    _assert(actual == expected, "policy invariance golden fixture drifted")
+    return {"fixture": str(expected_path), "matched": True}
+
+
 def main() -> None:
     report = {
         "policy_comparison": _run_policy_comparison(),
         "auto_and_floor": _run_auto_and_floor_checks(),
+        "policy_invariance": _policy_invariance_gate(),
         "stdio_smoke": _stdio_smoke(),
     }
     print(json.dumps(report, indent=2, sort_keys=True))

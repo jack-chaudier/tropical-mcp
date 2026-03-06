@@ -8,14 +8,14 @@ import logging
 import math
 import os
 import sys
-from typing import Any
+from typing import Any, cast
 
 from mcp.server.fastmcp import FastMCP
 
 from .algebra import ChunkState, L2Summary, l2_scan
 from .compactor import evict_l2_guarded, evict_recency, token_count
+from .runtime import TELEMETRY_SCHEMA_VERSION, resolve_runtime_settings, runtime_info_payload
 from .tagger import tag_chunk_detailed
-
 
 # IMPORTANT: stdout is reserved for MCP JSON-RPC transport.
 logging.basicConfig(
@@ -27,62 +27,85 @@ log = logging.getLogger("tropical-mcp")
 
 mcp = FastMCP("tropical-mcp")
 
-# ---------------------------------------------------------------------------
-# Auto-telemetry: every tool call logs its own result automatically.
-# Eliminates the need for manual `echo >> telemetry.jsonl` Bash calls.
-# ---------------------------------------------------------------------------
-
-_TELEMETRY_PATH = os.path.expanduser("~/.claude/compactor-telemetry.jsonl")
-
-
-def _log_telemetry(tool_name: str, result: dict[str, Any] | list) -> None:
+def _log_telemetry(
+    tool_name: str,
+    result: dict[str, Any] | list,
+    *,
+    context: dict[str, Any] | None = None,
+) -> None:
     """Append a telemetry record for every tool invocation."""
     try:
-        # Extract k_max_feasible from various result shapes
+        settings = resolve_runtime_settings()
+        if not settings.telemetry_enabled or settings.telemetry_path is None:
+            return
+
+        audit = result.get("audit", {}) if isinstance(result, dict) else {}
         k_max_feasible = None
         pivot_id = None
-        predecessor_count = 0
 
         if isinstance(result, dict):
             k_max_feasible = result.get("k_max_feasible")
-            # Nested in audit for compact/compact_auto
-            audit = result.get("audit")
             if audit and isinstance(audit, dict):
                 k_max_feasible = k_max_feasible or audit.get("k_max_feasible")
                 pivot_id = audit.get("baseline_pivot_id") or audit.get("pivot_id")
-                protected = audit.get("protected_ids", [])
-                predecessor_count = max(0, len(protected) - 1) if protected else 0
-            # Direct fields for inspect/inspect_horizon
             if pivot_id is None:
                 pivot_id = result.get("pivot_id")
-            if k_max_feasible is not None and predecessor_count == 0:
-                # For inspect_horizon, count from feasible slots
-                slots = result.get("slots", [])
-                if slots and k_max_feasible is not None:
-                    for slot in slots:
-                        if slot.get("k") == k_max_feasible:
-                            predecessor_count = len(slot.get("predecessor_ids", []))
-                            if pivot_id is None:
-                                pivot_id = slot.get("pivot_id")
-                            break
-        elif isinstance(result, list):
-            # tag returns a list — count roles
-            pivots = [r for r in result if isinstance(r, dict) and r.get("role") == "pivot"]
-            preds = [r for r in result if isinstance(r, dict) and r.get("role") == "predecessor"]
-            predecessor_count = len(preds)
+        if pivot_id is None and isinstance(result, list):
+            pivots = [row for row in result if isinstance(row, dict) and row.get("role") == "pivot"]
             if pivots:
                 pivot_id = pivots[0].get("id")
 
+        protected_ids = list(audit.get("protected_ids", [])) if isinstance(audit, dict) else []
+        breach_ids = list(audit.get("breach_ids", [])) if isinstance(audit, dict) else []
+        token_budget = None if context is None else context.get("token_budget")
+        policy_requested = None if context is None else context.get("policy_requested")
+        if policy_requested is None and isinstance(audit, dict):
+            policy_requested = audit.get("policy_requested")
+        if policy_requested is None and isinstance(audit, dict):
+            policy_requested = audit.get("policy")
+
+        policy_selected = None
+        if isinstance(audit, dict):
+            policy_selected = audit.get("policy_selected") or audit.get("policy")
+
+        k_target = None if context is None else context.get("k_target")
+        if k_target is None and context is not None and tool_name == "compact":
+            k_target = context.get("k_requested")
+
+        k_selected = None
+        if isinstance(audit, dict):
+            k_selected = audit.get("k_selected")
+            if k_selected is None and tool_name == "compact":
+                k_selected = audit.get("k")
+
         record = {
-            "timestamp": datetime.datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z"),
+            "schema_version": TELEMETRY_SCHEMA_VERSION,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
+            "client": settings.client,
+            "client_source": settings.client_source,
+            "run_id": settings.run_id,
             "tool": tool_name,
+            "policy_requested": policy_requested,
+            "policy_selected": policy_selected,
+            "k_target": k_target,
+            "k_selected": k_selected,
+            "token_budget": token_budget,
+            "tokens_before": audit.get("tokens_before") if isinstance(audit, dict) else None,
+            "tokens_after": audit.get("tokens_after") if isinstance(audit, dict) else None,
+            "guard_reason": audit.get("guard_reason") if isinstance(audit, dict) else None,
+            "guard_effective": audit.get("guard_effective") if isinstance(audit, dict) else None,
+            "feasible": (
+                audit.get("feasible")
+                if isinstance(audit, dict)
+                else (result.get("feasible") if isinstance(result, dict) else None)
+            ),
             "k_max_feasible": k_max_feasible,
             "pivot_id": pivot_id,
-            "predecessor_count": predecessor_count,
-            "auto": True,  # Distinguishes server-generated from manual entries
+            "protected_count": len(protected_ids),
+            "breach_count": len(breach_ids),
         }
-        os.makedirs(os.path.dirname(_TELEMETRY_PATH), exist_ok=True)
-        with open(_TELEMETRY_PATH, "a") as f:
+        os.makedirs(os.path.dirname(settings.telemetry_path), exist_ok=True)
+        with open(settings.telemetry_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(record) + "\n")
     except Exception:
         pass  # Telemetry must never break tool execution
@@ -280,6 +303,15 @@ def _horizon_from_summary(
 
 def _invalid(message: str) -> dict[str, str]:
     return {"error": message}
+
+
+@mcp.tool()
+def runtime_info() -> dict[str, Any]:
+    """Return the resolved runtime environment and telemetry configuration."""
+
+    result = runtime_info_payload(resolve_runtime_settings())
+    _log_telemetry("runtime_info", result)
+    return result
 
 
 def _select_auto_k(slots: list[dict[str, Any]], k_target: int, token_budget: int) -> tuple[int | None, bool]:
@@ -535,7 +567,11 @@ def compact(
 
     surviving_originals = [chunk["original"] for chunk in kept]
     result = {"messages": surviving_originals, "audit": audit}
-    _log_telemetry("compact", result)
+    _log_telemetry(
+        "compact",
+        result,
+        context={"policy_requested": policy, "token_budget": token_budget, "k_requested": k},
+    )
     return result
 
 
@@ -580,7 +616,7 @@ def inspect(messages: list[dict[str, Any]], k: int = 3) -> dict[str, Any]:
             for chunk in chunks
         ],
     }
-    _log_telemetry("inspect", result)
+    _log_telemetry("inspect", result, context={"k_requested": k})
     return result
 
 
@@ -618,7 +654,7 @@ def inspect_horizon(messages: list[dict[str, Any]], k_max: int = 8) -> dict[str,
             for chunk in chunks
         ],
     }
-    _log_telemetry("inspect_horizon", result)
+    _log_telemetry("inspect_horizon", result, context={"k_target": k_max})
     return result
 
 
@@ -648,7 +684,7 @@ def compact_auto(
     if fallback_policy not in {"recency", "l2_guarded", "l2_iterative_guarded"}:
         return _invalid("fallback_policy must be 'recency', 'l2_guarded', or 'l2_iterative_guarded'")
 
-    horizon = inspect_horizon(messages, k_max=k_target)
+    horizon = cast(dict[str, Any], inspect_horizon(messages, k_max=k_target))
     if "error" in horizon:
         return horizon
 
@@ -658,31 +694,40 @@ def compact_auto(
 
     if feasible_target:
         selected_policy = "l2_guarded"
-        out = compact(
-            messages,
-            token_budget=token_budget,
-            policy="l2_guarded",
-            k=k_target,
-            preserve_pivot=preserve_pivot,
+        out = cast(
+            dict[str, Any],
+            compact(
+                messages,
+                token_budget=token_budget,
+                policy="l2_guarded",
+                k=k_target,
+                preserve_pivot=preserve_pivot,
+            ),
         )
     elif mode == "adaptive" and k_selected is not None:
         selected_policy = "l2_guarded"
-        out = compact(
-            messages,
-            token_budget=token_budget,
-            policy="l2_guarded",
-            k=int(k_selected),
-            preserve_pivot=preserve_pivot,
+        out = cast(
+            dict[str, Any],
+            compact(
+                messages,
+                token_budget=token_budget,
+                policy="l2_guarded",
+                k=int(k_selected),
+                preserve_pivot=preserve_pivot,
+            ),
         )
     elif mode == "adaptive":
         selected_policy = fallback_policy
         fallback_k = int(k_selected) if k_selected is not None else 0
-        out = compact(
-            messages,
-            token_budget=token_budget,
-            policy=fallback_policy,
-            k=fallback_k,
-            preserve_pivot=preserve_pivot,
+        out = cast(
+            dict[str, Any],
+            compact(
+                messages,
+                token_budget=token_budget,
+                policy=fallback_policy,
+                k=fallback_k,
+                preserve_pivot=preserve_pivot,
+            ),
         )
     else:
         selected_policy = "none"
@@ -718,7 +763,11 @@ def compact_auto(
     out_audit["feasible_slots"] = feasible_slots
     out_audit["k_max_feasible"] = horizon["k_max_feasible"]
     out["audit"] = out_audit
-    _log_telemetry("compact_auto", out)
+    _log_telemetry(
+        "compact_auto",
+        out,
+        context={"policy_requested": "auto", "token_budget": token_budget, "k_target": k_target},
+    )
     return out
 
 
@@ -812,7 +861,7 @@ def retention_floor(
             "exact_contract_token_floor is exact for current tagged/provenanced context only."
         ),
     }
-    _log_telemetry("retention_floor", rf_result)
+    _log_telemetry("retention_floor", rf_result, context={"k_target": k})
     return rf_result
 
 
@@ -892,7 +941,7 @@ def diagnose(messages: list[dict[str, Any]], k_max: int = 8) -> dict[str, Any]:
         "slots": slots,
         "W": [round(w, 4) if math.isfinite(w) else None for w in summary.W],
     }
-    _log_telemetry("diagnose", result)
+    _log_telemetry("diagnose", result, context={"k_target": k_max})
     return result
 
 
