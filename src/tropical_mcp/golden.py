@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from .benchmark_harness import run_replay, summarize_rows
 from .server import compact, compact_auto
+
+
+def _normalize_for_golden(value: Any) -> Any:
+    if isinstance(value, float):
+        return round(value, 12)
+    if isinstance(value, list):
+        return [_normalize_for_golden(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _normalize_for_golden(item) for key, item in value.items()}
+    return value
 
 
 def fixture_k3() -> list[dict[str, str]]:
@@ -91,5 +101,4 @@ def capture_policy_invariance_snapshot() -> dict[str, Any]:
         line_count=200,
     )
     snapshot["replay_summary"] = summarize_rows(rows)
-    return snapshot
-
+    return cast(dict[str, Any], _normalize_for_golden(snapshot))

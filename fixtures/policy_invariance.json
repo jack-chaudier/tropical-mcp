@@ -349,7 +349,7 @@
       "pivot_preservation_rate": 1.0,
       "policy": "l2_guarded",
       "primary_full_rate": 1.0,
-      "realized_token_retention_mean": 0.7973431674543244
+      "realized_token_retention_mean": 0.797343167454
     },
     {
       "contract_satisfied_rate": 1.0,
@@ -360,7 +360,7 @@
       "pivot_preservation_rate": 1.0,
       "policy": "l2_guarded",
       "primary_full_rate": 1.0,
-      "realized_token_retention_mean": 0.6490576802257814
+      "realized_token_retention_mean": 0.649057680226
     },
     {
       "contract_satisfied_rate": 1.0,
@@ -371,7 +371,7 @@
       "pivot_preservation_rate": 1.0,
       "policy": "l2_guarded",
       "primary_full_rate": 1.0,
-      "realized_token_retention_mean": 0.49582934342295343
+      "realized_token_retention_mean": 0.495829343423
     },
     {
       "contract_satisfied_rate": 1.0,
@@ -382,7 +382,7 @@
       "pivot_preservation_rate": 1.0,
       "policy": "l2_guarded",
       "primary_full_rate": 1.0,
-      "realized_token_retention_mean": 0.39697235193725805
+      "realized_token_retention_mean": 0.396972351937
     },
     {
       "contract_satisfied_rate": 0.0,
@@ -401,10 +401,10 @@
       "fraction": 0.8,
       "mean_breach_count": 0.0,
       "n": 3,
-      "pivot_preservation_rate": 0.3333333333333333,
+      "pivot_preservation_rate": 0.333333333333,
       "policy": "recency",
-      "primary_full_rate": 0.3333333333333333,
-      "realized_token_retention_mean": 0.7972401277840513
+      "primary_full_rate": 0.333333333333,
+      "realized_token_retention_mean": 0.797240127784
     },
     {
       "contract_satisfied_rate": 0.0,
@@ -415,7 +415,7 @@
       "pivot_preservation_rate": 0.0,
       "policy": "recency",
       "primary_full_rate": 0.0,
-      "realized_token_retention_mean": 0.6485427364505251
+      "realized_token_retention_mean": 0.648542736451
     },
     {
       "contract_satisfied_rate": 0.0,
@@ -426,7 +426,7 @@
       "pivot_preservation_rate": 0.0,
       "policy": "recency",
       "primary_full_rate": 0.0,
-      "realized_token_retention_mean": 0.497065246335844
+      "realized_token_retention_mean": 0.497065246336
     },
     {
       "contract_satisfied_rate": 0.0,
@@ -437,7 +437,7 @@
       "pivot_preservation_rate": 0.0,
       "policy": "recency",
       "primary_full_rate": 0.0,
-      "realized_token_retention_mean": 0.3967664635877597
+      "realized_token_retention_mean": 0.396766463588
     }
   ]
 }
