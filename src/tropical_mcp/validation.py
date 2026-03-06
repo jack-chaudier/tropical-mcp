@@ -8,9 +8,10 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import cast
 
 from .golden import capture_policy_invariance_snapshot, fixture_k3
-from .server import compact, compact_auto, inspect, inspect_horizon, retention_floor
+from .server import certificate, compact, compact_auto, inspect, inspect_horizon, retention_floor
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -120,10 +121,43 @@ def _policy_invariance_gate() -> dict[str, object]:
     return {"fixture": str(expected_path), "matched": True}
 
 
+def _certificate_fixture_gate() -> dict[str, object]:
+    expected_path = ROOT / "fixtures" / "dreams_memory_safety_certificate.json"
+    transcript_path = ROOT / "fixtures" / "dreams_memory_safety_transcript.json"
+    expected = json.loads(expected_path.read_text(encoding="utf-8"))
+    transcript = json.loads(transcript_path.read_text(encoding="utf-8"))
+    actual = certificate(
+        messages=transcript["messages"],
+        token_budget=40,
+        k=3,
+        name="memory_safety_certificate_example",
+    )
+    projected = _project_shape(actual, expected)
+    _assert(projected == expected, "certificate fixture drifted from public dreams shape")
+    return {"fixture": str(expected_path), "matched": True}
+
+
+def _project_shape(actual: object, expected: object) -> object:
+    if isinstance(expected, dict):
+        _assert(isinstance(actual, dict), "certificate projection expected a dict")
+        actual_dict = cast(dict[str, object], actual)
+        return {key: _project_shape(actual_dict[key], value) for key, value in expected.items()}
+    if isinstance(expected, list):
+        _assert(isinstance(actual, list), "certificate projection expected a list")
+        actual_list = cast(list[object], actual)
+        _assert(len(actual_list) == len(expected), "certificate projection length mismatch")
+        return [
+            _project_shape(a_item, e_item)
+            for a_item, e_item in zip(actual_list, expected, strict=True)
+        ]
+    return actual
+
+
 def main() -> None:
     report = {
         "policy_comparison": _run_policy_comparison(),
         "auto_and_floor": _run_auto_and_floor_checks(),
+        "certificate_fixture": _certificate_fixture_gate(),
         "policy_invariance": _policy_invariance_gate(),
         "stdio_smoke": _stdio_smoke(),
     }

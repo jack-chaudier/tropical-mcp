@@ -15,6 +15,7 @@ SUPPORTED_TOOLS = (
     "inspect",
     "inspect_horizon",
     "compact_auto",
+    "certificate",
     "retention_floor",
     "tag",
     "diagnose",

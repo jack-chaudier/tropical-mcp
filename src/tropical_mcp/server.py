@@ -305,6 +305,19 @@ def _invalid(message: str) -> dict[str, str]:
     return {"error": message}
 
 
+def _audit_context(chunks: list[dict[str, Any]], k: int) -> dict[str, Any]:
+    states = chunks_to_algebra_states(chunks, k)
+    summary = l2_scan(states, k)
+    _, k_max_feasible = _horizon_from_summary(summary)
+    provenance = summary.provenance[k]
+    return {
+        "summary": summary,
+        "pivot_id": (provenance.pivot_id if provenance is not None else None),
+        "predecessor_ids": (list(provenance.pred_ids) if provenance is not None else []),
+        "k_max_feasible": k_max_feasible,
+    }
+
+
 @mcp.tool()
 def runtime_info() -> dict[str, Any]:
     """Return the resolved runtime environment and telemetry configuration."""
@@ -511,10 +524,10 @@ def compact(
         return _invalid(str(exc))
 
     tokens_before = sum(chunk["token_count"] for chunk in chunks)
+    audit_context = _audit_context(chunks, k)
 
     if policy == "l2_guarded":
-        states = chunks_to_algebra_states(chunks, k)
-        summary = l2_scan(states, k)
+        summary = audit_context["summary"]
         prot_ids, protected_priority, feasible_before = _protection_from_summary(summary, k)
         kept, audit = evict_l2_guarded(
             chunks,
@@ -564,6 +577,10 @@ def compact(
         return _invalid(
             f"Unknown policy '{policy}'. Use 'l2_guarded', 'l2_iterative_guarded', or 'recency'."
         )
+
+    audit["pivot_id"] = audit_context["pivot_id"]
+    audit["predecessor_ids"] = audit_context["predecessor_ids"]
+    audit["k_max_feasible"] = audit_context["k_max_feasible"]
 
     surviving_originals = [chunk["original"] for chunk in kept]
     result = {"messages": surviving_originals, "audit": audit}
@@ -762,6 +779,13 @@ def compact_auto(
     out_audit["feasible_target"] = feasible_target
     out_audit["feasible_slots"] = feasible_slots
     out_audit["k_max_feasible"] = horizon["k_max_feasible"]
+    if out_audit.get("pivot_id") is None and isinstance(k_selected, int):
+        selected_slot = next((slot for slot in slots if slot.get("k") == k_selected), None)
+        if selected_slot is not None:
+            out_audit["pivot_id"] = selected_slot.get("pivot_id")
+            out_audit["predecessor_ids"] = selected_slot.get("predecessor_ids", [])
+    elif "predecessor_ids" not in out_audit:
+        out_audit["predecessor_ids"] = []
     out["audit"] = out_audit
     _log_telemetry(
         "compact_auto",
@@ -769,6 +793,68 @@ def compact_auto(
         context={"policy_requested": "auto", "token_budget": token_budget, "k_target": k_target},
     )
     return out
+
+
+@mcp.tool()
+def certificate(
+    messages: list[dict[str, Any]],
+    token_budget: int = 4000,
+    k: int = 3,
+    baseline_policy: str = "recency",
+    guarded_policy: str = "l2_guarded",
+    name: str = "memory_safety_certificate",
+) -> dict[str, Any]:
+    """Build a certificate artifact comparing baseline and guarded compaction outputs."""
+
+    if token_budget < 0:
+        return _invalid("token_budget must be >= 0")
+    if k < 0:
+        return _invalid("k must be >= 0")
+
+    inspected = cast(dict[str, Any], inspect(messages, k=k))
+    if "error" in inspected:
+        return inspected
+
+    baseline = cast(dict[str, Any], compact(messages, token_budget=token_budget, policy=baseline_policy, k=k))
+    if "error" in baseline:
+        return baseline
+
+    guarded = cast(dict[str, Any], compact(messages, token_budget=token_budget, policy=guarded_policy, k=k))
+    if "error" in guarded:
+        return guarded
+
+    settings = resolve_runtime_settings()
+    result = {
+        "name": name,
+        "token_budget": token_budget,
+        "k": k,
+        "full_context": {
+            "pivot_id": inspected.get("pivot_id"),
+            "protected_ids": inspected.get("protected_ids", []),
+            "feasible": inspected.get("feasible"),
+            "W": inspected.get("W", []),
+        },
+        "policies": {
+            baseline_policy: {
+                "kept_ids": [str(msg["id"]) for msg in baseline["messages"]],
+                "audit": baseline["audit"],
+            },
+            guarded_policy: {
+                "kept_ids": [str(msg["id"]) for msg in guarded["messages"]],
+                "audit": guarded["audit"],
+            },
+        },
+        "metadata": {
+            "schema_version": 1,
+            "package_version": settings.package_version,
+            "full_context": {
+                "predecessor_ids": inspected.get("predecessor_ids", []),
+                "k_max_feasible": inspected.get("k_max_feasible"),
+            },
+        },
+    }
+    _log_telemetry("certificate", result, context={"token_budget": token_budget, "k_target": k})
+    return result
 
 
 @mcp.tool()
