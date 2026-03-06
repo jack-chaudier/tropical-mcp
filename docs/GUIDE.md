@@ -35,12 +35,14 @@ Real conversations often have the pivot first ("Build me X") then constraints la
 
 | Tool | What it does | When to use |
 |---|---|---|
+| `runtime_info` | Show resolved client, telemetry path, and package version | First smoke check after client registration |
 | `diagnose` | Tag + inspect_horizon in one call | Session start (replaces separate tag + inspect) |
 | `tag` | Classify messages as pivot/predecessor/noise | When new constraints arrive |
 | `inspect_horizon` | Show max feasible k across all slots | Every 5 tool calls; after compaction |
 | `inspect` | Check feasibility at a specific k | Before compaction; reviewing context health |
 | `compact_auto` | Auto-select best k and compress | Primary compaction entry point |
 | `compact` | Compress with a specific policy | When you need precise control |
+| `certificate` | Emit a portable memory-safety artifact | Before publishing or comparing runs |
 | `retention_floor` | Estimate safe retention over H epochs | Planning compression aggressiveness |
 
 ## Tagging Best Practices
@@ -76,16 +78,24 @@ This "launders" critical context into recent messages so it survives recency-bas
 - If inspect shows `feasible: false`, lower k or add `role_hint` overrides
 - Never hardcode k — always check via `inspect_horizon`
 - All tools return `k_max_feasible` for convenient monitoring
-- Telemetry is auto-logged to `~/.claude/compactor-telemetry.jsonl` by the server
+- Telemetry path is client-aware; use `runtime_info()` to inspect the resolved location
+
+## Client Boundaries
+
+- Codex: supported pattern is project-scoped config + explicit MCP tool calls + compact prompt override + durable memory files.
+- Claude Code: supported pattern is explicit MCP tool calls plus compact guidance in the client.
+- Neither client is intercepted automatically by this package; it does not replace the host's internal compactor.
 
 ## Telemetry
 
-Every tool call automatically appends to `~/.claude/compactor-telemetry.jsonl`:
-```json
-{"timestamp": "ISO8601Z", "tool": "tool_name", "k_max_feasible": int|null, "pivot_id": "id", "predecessor_count": int, "auto": true}
-```
+Every tool call automatically appends to the resolved telemetry path. For Codex, the default is `${CODEX_HOME:-~/.codex}/state/tropical-mcp/telemetry.jsonl`; for Claude-style clients it remains `~/.claude/compactor-telemetry.jsonl`; otherwise it falls back to `${XDG_STATE_HOME:-~/.local/state}/tropical-mcp/telemetry.jsonl`.
 
-Analyze with: `python scripts/analyze_telemetry.py`
+Current telemetry includes client/runtime details and artifact-grade fields such as policy selection, token counts, feasibility, guard reason, and pivot identity.
+
+Example:
+```json
+{"schema_version": 1, "timestamp": "ISO8601Z", "client": "codex", "tool": "compact_auto", "policy_selected": "l2_guarded", "tokens_after": 1200, "pivot_id": "msg_42"}
+```
 
 ## Stress Test Results
 
