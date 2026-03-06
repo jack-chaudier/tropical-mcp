@@ -1,0 +1,443 @@
+{
+  "compact": [
+    {
+      "breach_ids": [],
+      "budget": 79,
+      "contract_satisfied": null,
+      "dropped_ids": [],
+      "feasible": null,
+      "guard_effective": null,
+      "kept_ids": [
+        "n1",
+        "n2",
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "c5",
+        "pivot",
+        "f1",
+        "f2",
+        "f3",
+        "qa",
+        "summary"
+      ],
+      "policy": "recency",
+      "protected_ids": [],
+      "tokens_after": 79
+    },
+    {
+      "breach_ids": [],
+      "budget": 60,
+      "contract_satisfied": null,
+      "dropped_ids": [
+        "n1",
+        "n2",
+        "c1",
+        "c2"
+      ],
+      "feasible": null,
+      "guard_effective": null,
+      "kept_ids": [
+        "c3",
+        "c4",
+        "c5",
+        "pivot",
+        "f1",
+        "f2",
+        "f3",
+        "qa",
+        "summary"
+      ],
+      "policy": "recency",
+      "protected_ids": [],
+      "tokens_after": 58
+    },
+    {
+      "breach_ids": [],
+      "budget": 35,
+      "contract_satisfied": null,
+      "dropped_ids": [
+        "n1",
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "pivot"
+      ],
+      "feasible": null,
+      "guard_effective": null,
+      "kept_ids": [
+        "n2",
+        "c5",
+        "f1",
+        "f2",
+        "f3",
+        "qa",
+        "summary"
+      ],
+      "policy": "recency",
+      "protected_ids": [],
+      "tokens_after": 35
+    },
+    {
+      "breach_ids": [],
+      "budget": 79,
+      "contract_satisfied": true,
+      "dropped_ids": [],
+      "feasible": true,
+      "guard_effective": true,
+      "kept_ids": [
+        "n1",
+        "n2",
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "c5",
+        "pivot",
+        "f1",
+        "f2",
+        "f3",
+        "qa",
+        "summary"
+      ],
+      "policy": "l2_guarded",
+      "protected_ids": [
+        "c3",
+        "c4",
+        "c5",
+        "pivot"
+      ],
+      "tokens_after": 79
+    },
+    {
+      "breach_ids": [],
+      "budget": 60,
+      "contract_satisfied": true,
+      "dropped_ids": [
+        "n1",
+        "n2",
+        "c1",
+        "c2"
+      ],
+      "feasible": true,
+      "guard_effective": true,
+      "kept_ids": [
+        "c3",
+        "c4",
+        "c5",
+        "pivot",
+        "f1",
+        "f2",
+        "f3",
+        "qa",
+        "summary"
+      ],
+      "policy": "l2_guarded",
+      "protected_ids": [
+        "c3",
+        "c4",
+        "c5",
+        "pivot"
+      ],
+      "tokens_after": 58
+    },
+    {
+      "breach_ids": [
+        "c3"
+      ],
+      "budget": 35,
+      "contract_satisfied": false,
+      "dropped_ids": [
+        "n1",
+        "n2",
+        "c1",
+        "c2",
+        "c3",
+        "f1",
+        "f2",
+        "f3",
+        "summary"
+      ],
+      "feasible": false,
+      "guard_effective": false,
+      "kept_ids": [
+        "c4",
+        "c5",
+        "pivot",
+        "qa"
+      ],
+      "policy": "l2_guarded",
+      "protected_ids": [
+        "c3",
+        "c4",
+        "c5",
+        "pivot"
+      ],
+      "tokens_after": 35
+    },
+    {
+      "breach_ids": [],
+      "budget": 79,
+      "contract_satisfied": true,
+      "dropped_ids": [],
+      "feasible": true,
+      "guard_effective": true,
+      "kept_ids": [
+        "n1",
+        "n2",
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "c5",
+        "pivot",
+        "f1",
+        "f2",
+        "f3",
+        "qa",
+        "summary"
+      ],
+      "policy": "l2_iterative_guarded",
+      "protected_ids": [
+        "c3",
+        "c4",
+        "c5",
+        "pivot"
+      ],
+      "tokens_after": 79
+    },
+    {
+      "breach_ids": [],
+      "budget": 60,
+      "contract_satisfied": true,
+      "dropped_ids": [
+        "n1",
+        "n2",
+        "c1",
+        "c2"
+      ],
+      "feasible": true,
+      "guard_effective": true,
+      "kept_ids": [
+        "c3",
+        "c4",
+        "c5",
+        "pivot",
+        "f1",
+        "f2",
+        "f3",
+        "qa",
+        "summary"
+      ],
+      "policy": "l2_iterative_guarded",
+      "protected_ids": [
+        "c3",
+        "c4",
+        "c5",
+        "pivot"
+      ],
+      "tokens_after": 58
+    },
+    {
+      "breach_ids": [
+        "c3"
+      ],
+      "budget": 35,
+      "contract_satisfied": false,
+      "dropped_ids": [
+        "n1",
+        "n2",
+        "c1",
+        "c2",
+        "c3",
+        "f1",
+        "f2",
+        "f3",
+        "qa",
+        "summary"
+      ],
+      "feasible": false,
+      "guard_effective": false,
+      "kept_ids": [
+        "c4",
+        "c5",
+        "pivot"
+      ],
+      "policy": "l2_iterative_guarded",
+      "protected_ids": [
+        "c3",
+        "c4",
+        "c5",
+        "pivot"
+      ],
+      "tokens_after": 30
+    }
+  ],
+  "compact_auto": [
+    {
+      "contract_satisfied": true,
+      "dropped_ids": [],
+      "feasible": true,
+      "guard_effective": true,
+      "k_selected": 5,
+      "kept_ids": [
+        "n1",
+        "n2",
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "c5",
+        "pivot",
+        "f1",
+        "f2",
+        "f3",
+        "qa",
+        "summary"
+      ],
+      "label": "adaptive_120_k5",
+      "policy_selected": "l2_guarded",
+      "tokens_after": 79
+    },
+    {
+      "contract_satisfied": true,
+      "dropped_ids": [
+        "n1",
+        "n2",
+        "f1",
+        "f2",
+        "qa"
+      ],
+      "feasible": true,
+      "guard_effective": true,
+      "k_selected": 5,
+      "kept_ids": [
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "c5",
+        "pivot",
+        "f3",
+        "summary"
+      ],
+      "label": "strict_60_k5",
+      "policy_selected": "l2_guarded",
+      "tokens_after": 60
+    }
+  ],
+  "replay_summary": [
+    {
+      "contract_satisfied_rate": 1.0,
+      "decoy_full_rate": 1.0,
+      "fraction": 1.0,
+      "mean_breach_count": 0.0,
+      "n": 3,
+      "pivot_preservation_rate": 1.0,
+      "policy": "l2_guarded",
+      "primary_full_rate": 1.0,
+      "realized_token_retention_mean": 1.0
+    },
+    {
+      "contract_satisfied_rate": 1.0,
+      "decoy_full_rate": 1.0,
+      "fraction": 0.8,
+      "mean_breach_count": 0.0,
+      "n": 3,
+      "pivot_preservation_rate": 1.0,
+      "policy": "l2_guarded",
+      "primary_full_rate": 1.0,
+      "realized_token_retention_mean": 0.7973431674543244
+    },
+    {
+      "contract_satisfied_rate": 1.0,
+      "decoy_full_rate": 1.0,
+      "fraction": 0.65,
+      "mean_breach_count": 0.0,
+      "n": 3,
+      "pivot_preservation_rate": 1.0,
+      "policy": "l2_guarded",
+      "primary_full_rate": 1.0,
+      "realized_token_retention_mean": 0.6490576802257814
+    },
+    {
+      "contract_satisfied_rate": 1.0,
+      "decoy_full_rate": 1.0,
+      "fraction": 0.5,
+      "mean_breach_count": 0.0,
+      "n": 3,
+      "pivot_preservation_rate": 1.0,
+      "policy": "l2_guarded",
+      "primary_full_rate": 1.0,
+      "realized_token_retention_mean": 0.49582934342295343
+    },
+    {
+      "contract_satisfied_rate": 1.0,
+      "decoy_full_rate": 1.0,
+      "fraction": 0.4,
+      "mean_breach_count": 0.0,
+      "n": 3,
+      "pivot_preservation_rate": 1.0,
+      "policy": "l2_guarded",
+      "primary_full_rate": 1.0,
+      "realized_token_retention_mean": 0.39697235193725805
+    },
+    {
+      "contract_satisfied_rate": 0.0,
+      "decoy_full_rate": 1.0,
+      "fraction": 1.0,
+      "mean_breach_count": 0.0,
+      "n": 3,
+      "pivot_preservation_rate": 1.0,
+      "policy": "recency",
+      "primary_full_rate": 1.0,
+      "realized_token_retention_mean": 1.0
+    },
+    {
+      "contract_satisfied_rate": 0.0,
+      "decoy_full_rate": 1.0,
+      "fraction": 0.8,
+      "mean_breach_count": 0.0,
+      "n": 3,
+      "pivot_preservation_rate": 0.3333333333333333,
+      "policy": "recency",
+      "primary_full_rate": 0.3333333333333333,
+      "realized_token_retention_mean": 0.7972401277840513
+    },
+    {
+      "contract_satisfied_rate": 0.0,
+      "decoy_full_rate": 1.0,
+      "fraction": 0.65,
+      "mean_breach_count": 0.0,
+      "n": 3,
+      "pivot_preservation_rate": 0.0,
+      "policy": "recency",
+      "primary_full_rate": 0.0,
+      "realized_token_retention_mean": 0.6485427364505251
+    },
+    {
+      "contract_satisfied_rate": 0.0,
+      "decoy_full_rate": 1.0,
+      "fraction": 0.5,
+      "mean_breach_count": 0.0,
+      "n": 3,
+      "pivot_preservation_rate": 0.0,
+      "policy": "recency",
+      "primary_full_rate": 0.0,
+      "realized_token_retention_mean": 0.497065246335844
+    },
+    {
+      "contract_satisfied_rate": 0.0,
+      "decoy_full_rate": 1.0,
+      "fraction": 0.4,
+      "mean_breach_count": 0.0,
+      "n": 3,
+      "pivot_preservation_rate": 0.0,
+      "policy": "recency",
+      "primary_full_rate": 0.0,
+      "realized_token_retention_mean": 0.3967664635877597
+    }
+  ]
+}

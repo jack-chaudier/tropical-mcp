@@ -42,6 +42,7 @@ include = [
   "scripts/*.py",
   "scripts/*.sh",
   "tests/*.py",
+  "fixtures/*.json",
   "README.md",
   "LICENSE",
   "pyproject.toml",
