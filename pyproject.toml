@@ -28,6 +28,10 @@ Issues = "https://github.com/jack-chaudier/tropical-mcp/issues"
 tropical-mcp = "tropical_mcp.server:main"
 tropical-mcp-replay = "tropical_mcp.benchmark_harness:main"
 tropical-mcp-full-validate = "tropical_mcp.validation:main"
+tropical-mcp-certificate = "tropical_mcp.certificate_cli:main"
+tropical-compactor = "tropical_mcp.compat:tropical_compactor"
+tropical-compactor-replay = "tropical_mcp.compat:tropical_compactor_replay"
+tropical-compactor-full-validate = "tropical_mcp.compat:tropical_compactor_full_validate"
 
 [build-system]
 requires = ["hatchling>=1.25.0"]

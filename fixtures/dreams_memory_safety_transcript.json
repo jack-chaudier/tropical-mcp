@@ -1,0 +1,39 @@
+{
+  "messages": [
+    {
+      "id": "hc1",
+      "text": "w1 w2 w3 w4 x",
+      "role_hint": "predecessor"
+    },
+    {
+      "id": "hc2",
+      "text": "w5 w6 w7 w8 x",
+      "role_hint": "predecessor"
+    },
+    {
+      "id": "hc3",
+      "text": "w9 w10 w11 w12 x",
+      "role_hint": "predecessor"
+    },
+    {
+      "id": "p1",
+      "text": "p1 p2 p3 p4 x",
+      "role_hint": "pivot"
+    },
+    {
+      "id": "n1",
+      "text": "n1 n2 n3 x",
+      "role_hint": "noise"
+    },
+    {
+      "id": "n2",
+      "text": "n4 n5 n6 x",
+      "role_hint": "noise"
+    },
+    {
+      "id": "n3",
+      "text": "n7 n8 n9 x",
+      "role_hint": "noise"
+    }
+  ]
+}

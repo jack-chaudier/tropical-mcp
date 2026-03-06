@@ -73,6 +73,9 @@ def test_compact_l2_guarded_preserves_protected_ids_under_budget() -> None:
     assert out["audit"]["protection_satisfied"] is True
     assert out["audit"]["guard_effective"] is True
     assert out["audit"]["guard_reason"] == "active"
+    assert out["audit"]["pivot_id"] == "m2"
+    assert out["audit"]["predecessor_ids"] == ["m3"]
+    assert out["audit"]["k_max_feasible"] == 1
 
 
 def test_compact_recency_policy_and_invalid_policy_handling() -> None:
@@ -84,6 +87,9 @@ def test_compact_recency_policy_and_invalid_policy_handling() -> None:
     assert out["audit"]["tokens_after"] <= budget
     assert out["audit"]["guard_effective"] is None
     assert out["audit"]["guard_reason"] == "not_applicable"
+    assert out["audit"]["pivot_id"] == "m2"
+    assert out["audit"]["predecessor_ids"] == ["m3"]
+    assert out["audit"]["k_max_feasible"] == 1
 
     bad = compact(MESSAGES, token_budget=budget, policy="bad-policy", k=1)
     assert "error" in bad

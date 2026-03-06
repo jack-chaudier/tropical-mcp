@@ -97,6 +97,6 @@ def test_runtime_info_reports_shape(monkeypatch, tmp_path: Path) -> None:
     assert info["client_source"] == "explicit"
     assert info["telemetry_enabled"] is True
     assert str(info["telemetry_path"]).endswith("state/tropical-mcp/telemetry.jsonl")
+    assert "certificate" in info["supported_tools"]
     assert "runtime_info" in info["supported_tools"]
     assert "l2_guarded" in info["supported_policies"]
-
