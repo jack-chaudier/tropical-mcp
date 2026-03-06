@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
+    import tomli as tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / "examples" / "codex"
@@ -50,4 +53,3 @@ def test_codex_docs_reference_current_registration_flow() -> None:
     assert "runtime_info()" in config_doc
     assert "diagnose(...)" in config_doc
     assert "does not replace Codex's internal compactor automatically" in config_doc
-
