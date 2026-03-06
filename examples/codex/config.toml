@@ -1,0 +1,16 @@
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+model_auto_compact_token_limit = 220000
+experimental_compact_prompt_file = "examples/codex/compact_prompt.md"
+
+[mcp_servers.tropical-mcp]
+command = "uv"
+args = ["--directory", "/absolute/path/to/tropical-mcp", "run", "tropical-mcp"]
+env = { TROPICAL_MCP_CLIENT = "codex" }
+startup_timeout_sec = 10
+tool_timeout_sec = 60
+
+[profiles.stress]
+model_auto_compact_token_limit = 60000
+experimental_compact_prompt_file = "examples/codex/compact_prompt.md"
+

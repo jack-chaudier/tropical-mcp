@@ -1,6 +1,6 @@
 [project]
 name = "tropical-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "FastMCP server for L2 tropical-algebra context compaction"
 readme = "README.md"
 requires-python = ">=3.10"

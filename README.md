@@ -14,9 +14,11 @@ Public research showcase (papers + demo + artifacts): <https://github.com/jack-c
   - `l2_guarded` (default contract-guarded policy)
   - `l2_iterative_guarded` (iterative safe-removal variant)
   - `recency` (baseline)
+- `certificate(...)` for portable memory-safety artifacts
 - `inspect(messages, k)` for frontier + witness inspection
 - `inspect_horizon(messages, k_max)` for feasible `k` range diagnostics
 - `compact_auto(...)` for adaptive `k` selection
+- `runtime_info()` for client/runtime introspection
 - `retention_floor(...)` for operational risk estimates
 - `tag(messages)` for role inference diagnostics
 
@@ -29,6 +31,7 @@ Public research showcase (papers + demo + artifacts): <https://github.com/jack-c
 
 ```text
 tropical-mcp/
+├── examples/codex/          # Codex-ready config + durable memory templates
 ├── src/tropical_mcp/
 │   ├── server.py
 │   ├── algebra.py
@@ -91,11 +94,47 @@ claude mcp add tropical-mcp --scope user -- \
 `~/.codex/config.toml`
 
 ```toml
-[[mcp_servers]]
-name = "tropical-mcp"
+[mcp_servers.tropical-mcp]
 command = "uv"
 args = ["--directory", "/absolute/path/to/tropical-mcp", "run", "tropical-mcp"]
+env = { TROPICAL_MCP_CLIENT = "codex" }
+startup_timeout_sec = 10
+tool_timeout_sec = 60
 ```
+
+or via CLI:
+
+```bash
+codex mcp add tropical-mcp --env TROPICAL_MCP_CLIENT=codex -- \
+  uv --directory /absolute/path/to/tropical-mcp run tropical-mcp
+codex mcp list
+```
+
+See the full example bundle in [`examples/codex/`](./examples/codex/).
+
+## Integration Boundary
+
+Supported:
+
+- project-scoped Codex config with named `mcp_servers` tables
+- `experimental_compact_prompt_file` and `model_auto_compact_token_limit`
+- explicit MCP tool calls such as `runtime_info()`, `diagnose(...)`, `compact_auto(...)`, and `certificate(...)`
+- durable memory files such as `Prompt.md`, `Plan.md`, `Implement.md`, and `Documentation.md`
+
+Not supported:
+
+- automatic replacement of Codex's internal compactor
+- automatic interception of Claude Code or Codex host compaction events
+
+The intended pattern is: configure the client, keep durable files up to date, and invoke the MCP tools explicitly during long runs.
+
+## Compatibility Aliases
+
+These aliases are provided for one release cycle to ease migration from the older command names:
+
+- `tropical-compactor`
+- `tropical-compactor-replay`
+- `tropical-compactor-full-validate`
 
 ## Replay Benchmark
 
