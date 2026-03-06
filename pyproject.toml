@@ -1,7 +1,7 @@
 [project]
 name = "tropical-mcp"
 version = "0.2.0"
-description = "FastMCP server for L2 tropical-algebra context compaction"
+description = "Installable MCP server for guarded context compaction in Codex and Claude-style clients"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -21,7 +21,7 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jack-chaudier/tropical-mcp"
+Homepage = "https://dreams-dun.vercel.app"
 Repository = "https://github.com/jack-chaudier/tropical-mcp"
 Issues = "https://github.com/jack-chaudier/tropical-mcp/issues"
 

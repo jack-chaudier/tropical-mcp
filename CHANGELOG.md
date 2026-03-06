@@ -17,6 +17,8 @@ All notable changes to this project are documented here.
 
 - Codex docs now use named `[mcp_servers.tropical-mcp]` tables and the `codex mcp add` / `codex mcp list` workflow
 - Build/test validation now covers runtime, certificate shape compatibility, and docs/example consistency
+- README, configuration docs, and Codex example notes now make the public repo split explicit: `dreams` for research/evidence, `tropical-mcp` for installation
+- Verification guidance now centers the supported `runtime_info()`, `compact_auto(...)`, and `certificate(...)` flow while keeping `diagnose(...)` available for horizon inspection
 
 ## [0.1.0] - 2026-02-25
 

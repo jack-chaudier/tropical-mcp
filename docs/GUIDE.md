@@ -1,8 +1,10 @@
-# Tropical Compactor — Full Guide
+# tropical-mcp — Full Guide
+
+`tropical-mcp` is the installable implementation of the MirageKit research program. This guide explains the supported workflow for Codex, Claude Code, and similar tool-calling clients: register the MCP, keep any compact prompt and durable memory files nearby, and call the tools explicitly. The package does not intercept a host client's internal compactor automatically.
 
 ## The Problem: Validity Mirage
 
-When you work on a complex task, the user gives constraints across multiple messages. After 30-40 tool calls, Claude Code's built-in auto-compaction activates and silently evicts older messages using recency — keeping recent messages, dropping old ones.
+When you work on a complex task, the user gives constraints across multiple messages. After enough turns, a host client may auto-compact and silently evict older messages using recency-like heuristics — keeping recent messages, dropping old ones.
 
 The constraints were in those old messages. After compaction:
 - You confidently keep building, but you've lost 3 of 7 constraints

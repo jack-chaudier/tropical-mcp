@@ -18,7 +18,8 @@
 ## Manual Smoke Checklist
 1. Register the MCP in Codex.
 2. Call `runtime_info()`.
-3. Call `diagnose(...)`.
-4. Confirm telemetry lands in the Codex path.
-5. Remove any old `tropical-compactor` registration only after the new server passes smoke.
-
+3. Call `compact_auto(...)`.
+4. Call `certificate(...)`.
+5. Call `diagnose(...)` if you want the tagged horizon view.
+6. Confirm telemetry lands in the Codex path.
+7. Remove any old `tropical-compactor` registration only after the new server passes smoke.
