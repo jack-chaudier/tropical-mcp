@@ -1,8 +1,8 @@
 # tropical-mcp
 
-Installable MCP server for **guarded context compaction** in Codex, Claude Code, and similar tool-calling clients.
+Source-available MCP server for **guarded context compaction** in Codex, Claude Code, and similar tool-calling clients.
 
-`tropical-mcp` is the installable implementation for the MirageKit research program. The public research showcase, working papers, replay artifacts, and live demo live in [`dreams`](https://github.com/jack-chaudier/dreams).
+`tropical-mcp` is the evaluation implementation for the MirageKit research program. The public research showcase, working papers, replay artifacts, and live demo live in [`dreams`](https://github.com/jack-chaudier/dreams).
 
 This package addresses a long-context reliability failure mode: an agent can remain answer-valid while silently switching the governing task intent under naive memory compression. `tropical-mcp` exposes explicit MCP tools that preserve pivot-critical structure when feasible and emit auditable artifacts when they cannot.
 
@@ -39,9 +39,9 @@ Not supported:
 - automatic interception of Codex or Claude Code host compaction events
 - magical drop-in replacement of client-owned compression internals
 
-## Install From Source
+## Install For Evaluation
 
-Current public install path: clone this repository and install from source.
+Current public evaluation path: clone this repository and install from source for academic research, peer review, or internal evaluation.
 
 ```bash
 git clone https://github.com/jack-chaudier/tropical-mcp.git ~/tropical-mcp
@@ -50,6 +50,14 @@ uv venv
 source .venv/bin/activate
 uv pip install -e '.[dev]'
 ```
+
+## License Boundary
+
+This repository is currently **source-available for evaluation**.
+
+You may clone, install, run, and reproduce the unmodified repository for academic research, peer review, and internal evaluation. Public redistribution, derivative works, hosted-service use, and commercial production use require prior written consent.
+
+See [`LICENSE`](./LICENSE) for the full terms. For broader rights, contact `jackgaff@umich.edu`.
 
 ## Codex Quick-Start
 

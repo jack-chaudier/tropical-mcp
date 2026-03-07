@@ -1,7 +1,14 @@
 Copyright (c) 2025–2026 Jack Chaudier Gaffney. All rights reserved.
 
-This repository and its contents are provided for academic review purposes only.
-No permission is granted to copy, modify, distribute, or create derivative works
-without explicit written consent from the author.
+Permission is granted to clone, copy internally, install, run, and reproduce the
+unmodified contents of this repository for academic research, peer review, and
+internal evaluation.
+
+No permission is granted to publicly redistribute, sublicense, sell, host as a
+service, modify, create derivative works from, or use the contents of this
+repository in commercial production without explicit written consent from the
+author.
+
+All other rights are reserved.
 
 See projects/lorien/LICENSE for the MIT-licensed Lorien components.

@@ -1,7 +1,7 @@
 [project]
 name = "tropical-mcp"
 version = "0.2.0"
-description = "Installable MCP server for guarded context compaction in Codex and Claude-style clients"
+description = "Source-available MCP server for guarded context compaction in Codex and Claude-style clients"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -43,14 +43,24 @@ packages = ["src/tropical_mcp"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "src/tropical_mcp/*.py",
-  "scripts/*.py",
-  "scripts/*.sh",
-  "tests/*.py",
-  "fixtures/*.json",
-  "README.md",
-  "LICENSE",
-  "pyproject.toml",
+  "/src/tropical_mcp",
+  "/scripts",
+  "/tests",
+  "/fixtures",
+  "/docs",
+  "/examples",
+  "/README.md",
+  "/LICENSE",
+  "/pyproject.toml",
+  "/CHANGELOG.md",
+  "/CONTRIBUTING.md",
+  "/SECURITY.md",
+]
+exclude = [
+  "/.venv",
+  "/.venv*",
+  "/build",
+  "/dist",
 ]
 
 [tool.pytest.ini_options]

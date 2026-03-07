@@ -1,6 +1,6 @@
 # tropical-mcp — Full Guide
 
-`tropical-mcp` is the installable implementation of the MirageKit research program. This guide explains the supported workflow for Codex, Claude Code, and similar tool-calling clients: register the MCP, keep any compact prompt and durable memory files nearby, and call the tools explicitly. The package does not intercept a host client's internal compactor automatically.
+`tropical-mcp` is the source-available evaluation implementation of the MirageKit research program. This guide explains the supported workflow for Codex, Claude Code, and similar tool-calling clients: register the MCP, keep any compact prompt and durable memory files nearby, and call the tools explicitly. The package does not intercept a host client's internal compactor automatically.
 
 ## The Problem: Validity Mirage
 
