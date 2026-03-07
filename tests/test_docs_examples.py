@@ -28,8 +28,8 @@ def test_codex_example_bundle_exists() -> None:
 def test_codex_example_config_is_consistent() -> None:
     config = tomllib.loads((EXAMPLES / "config.toml").read_text(encoding="utf-8"))
 
-    assert config["approval_policy"] == "on-request"
-    assert config["sandbox_mode"] == "workspace-write"
+    assert "approval_policy" not in config
+    assert "sandbox_mode" not in config
     assert config["model_auto_compact_token_limit"] == 220000
     assert config["profiles"]["stress"]["model_auto_compact_token_limit"] < config["model_auto_compact_token_limit"]
 
@@ -46,6 +46,7 @@ def test_codex_example_config_is_consistent() -> None:
 def test_codex_docs_reference_current_registration_flow() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     config_doc = (ROOT / "docs" / "configuration.md").read_text(encoding="utf-8")
+    doc_log = (EXAMPLES / "Documentation.md").read_text(encoding="utf-8")
 
     assert "[mcp_servers.tropical-mcp]" in readme
     assert "codex mcp add tropical-mcp" in readme
@@ -58,3 +59,5 @@ def test_codex_docs_reference_current_registration_flow() -> None:
     assert "context_anchor(...)" in config_doc
     assert "telemetry_summary(...)" in config_doc
     assert "does not replace Codex's internal compactor automatically" in config_doc
+    assert "v0.3.0" in config_doc
+    assert "./scripts/validate_installed_wheel.sh" in doc_log

@@ -11,6 +11,9 @@ All notable changes to this project are documented here.
 - Hardened telemetry handling to warn on write failures instead of failing silently
 - Sanitized validation fixture references so public artifacts no longer leak maintainer-local absolute paths
 - Expanded tests and CI smoke coverage for replay and compatibility CLI entrypoints
+- Moved golden validation fixtures into the installed package so wheel-based validation matches source-checkout validation
+- Added an installed-wheel validation script and CI step to prevent package/repo drift
+- Added citation metadata, a release checklist, and safer Codex example guidance for public evaluator workflows
 
 ## [0.2.0] - 2026-03-06
 

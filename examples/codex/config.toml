@@ -1,5 +1,5 @@
-approval_policy = "on-request"
-sandbox_mode = "workspace-write"
+# Optional policy knobs such as approval_policy and sandbox_mode are intentionally omitted here.
+# Add them locally only if you want project-specific overrides.
 model_auto_compact_token_limit = 220000
 experimental_compact_prompt_file = "examples/codex/compact_prompt.md"
 

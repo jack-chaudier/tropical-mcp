@@ -11,13 +11,14 @@ from pathlib import Path
 from typing import cast
 
 from .golden import capture_policy_invariance_snapshot, fixture_k3
+from .resources import fixture_json, fixture_ref
 from .server import certificate, compact, compact_auto, inspect, inspect_horizon, retention_floor
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def _public_fixture_ref(path: Path) -> str:
-    return path.relative_to(ROOT).as_posix()
+def _public_fixture_ref(name: str) -> str:
+    return fixture_ref(name)
 
 
 def _assert(condition: bool, message: str) -> None:
@@ -118,18 +119,15 @@ def _stdio_smoke() -> dict[str, object]:
 
 
 def _policy_invariance_gate() -> dict[str, object]:
-    expected_path = ROOT / "fixtures" / "policy_invariance.json"
-    expected = json.loads(expected_path.read_text(encoding="utf-8"))
+    expected = fixture_json("policy_invariance.json")
     actual = capture_policy_invariance_snapshot()
     _assert(actual == expected, "policy invariance golden fixture drifted")
-    return {"fixture": _public_fixture_ref(expected_path), "matched": True}
+    return {"fixture": _public_fixture_ref("policy_invariance.json"), "matched": True}
 
 
 def _certificate_fixture_gate() -> dict[str, object]:
-    expected_path = ROOT / "fixtures" / "dreams_memory_safety_certificate.json"
-    transcript_path = ROOT / "fixtures" / "dreams_memory_safety_transcript.json"
-    expected = json.loads(expected_path.read_text(encoding="utf-8"))
-    transcript = json.loads(transcript_path.read_text(encoding="utf-8"))
+    expected = fixture_json("dreams_memory_safety_certificate.json")
+    transcript = fixture_json("dreams_memory_safety_transcript.json")
     actual = certificate(
         messages=transcript["messages"],
         token_budget=40,
@@ -138,7 +136,7 @@ def _certificate_fixture_gate() -> dict[str, object]:
     )
     projected = _project_shape(actual, expected)
     _assert(projected == expected, "certificate fixture drifted from public dreams shape")
-    return {"fixture": _public_fixture_ref(expected_path), "matched": True}
+    return {"fixture": _public_fixture_ref("dreams_memory_safety_certificate.json"), "matched": True}
 
 
 def _project_shape(actual: object, expected: object) -> object:

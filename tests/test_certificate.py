@@ -4,16 +4,13 @@ import json
 from pathlib import Path
 
 from tropical_mcp.certificate_cli import main as certificate_cli_main
+from tropical_mcp.resources import fixture_json
 from tropical_mcp.server import certificate
-
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
-EXPECTED_CERTIFICATE = FIXTURES / "dreams_memory_safety_certificate.json"
-TRANSCRIPT = FIXTURES / "dreams_memory_safety_transcript.json"
 
 
 def test_certificate_matches_public_dreams_fixture_shape() -> None:
-    expected = json.loads(EXPECTED_CERTIFICATE.read_text(encoding="utf-8"))
-    transcript = json.loads(TRANSCRIPT.read_text(encoding="utf-8"))
+    expected = fixture_json("dreams_memory_safety_certificate.json")
+    transcript = fixture_json("dreams_memory_safety_transcript.json")
 
     actual = certificate(
         messages=transcript["messages"],
@@ -30,10 +27,15 @@ def test_certificate_matches_public_dreams_fixture_shape() -> None:
 
 def test_certificate_cli_writes_expected_shape(tmp_path: Path) -> None:
     output_path = tmp_path / "certificate.json"
+    transcript_path = tmp_path / "transcript.json"
+    transcript_path.write_text(
+        json.dumps(fixture_json("dreams_memory_safety_transcript.json"), indent=2),
+        encoding="utf-8",
+    )
     certificate_cli_main(
         [
             "--input",
-            str(TRANSCRIPT),
+            str(transcript_path),
             "--output",
             str(output_path),
             "--token-budget",
@@ -45,7 +47,7 @@ def test_certificate_cli_writes_expected_shape(tmp_path: Path) -> None:
         ]
     )
 
-    expected = json.loads(EXPECTED_CERTIFICATE.read_text(encoding="utf-8"))
+    expected = fixture_json("dreams_memory_safety_certificate.json")
     actual = json.loads(output_path.read_text(encoding="utf-8"))
     assert _project_shape(actual, expected) == expected
     assert "metadata" in actual

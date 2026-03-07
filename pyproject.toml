@@ -6,6 +6,17 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [{ name = "Jack Chaudier Gaffney", email = "jackgaff@umich.edu" }]
+keywords = ["mcp", "context-compaction", "llm-evaluation", "ai-safety", "codex", "claude-code"]
+classifiers = [
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
   "mcp[cli]>=1.2.0",
   "tiktoken>=0.7.0",
@@ -22,6 +33,8 @@ dev = [
 
 [project.urls]
 Homepage = "https://dreams-dun.vercel.app"
+Documentation = "https://github.com/jack-chaudier/tropical-mcp/blob/main/docs/GUIDE.md"
+Research = "https://dreams-dun.vercel.app/evidence"
 Repository = "https://github.com/jack-chaudier/tropical-mcp"
 Issues = "https://github.com/jack-chaudier/tropical-mcp/issues"
 
@@ -47,11 +60,12 @@ include = [
   "/src/tropical_mcp",
   "/scripts",
   "/tests",
-  "/fixtures",
   "/docs",
   "/examples",
   "/README.md",
   "/LICENSE",
+  "/CITATION.cff",
+  "/CODE_OF_CONDUCT.md",
   "/pyproject.toml",
   "/CHANGELOG.md",
   "/CONTRIBUTING.md",
