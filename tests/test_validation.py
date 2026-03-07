@@ -11,8 +11,8 @@ def test_validation_fixture_refs_are_repo_relative() -> None:
     cert_gate = _certificate_fixture_gate()
     policy_gate = _policy_invariance_gate()
 
-    assert cert_gate["fixture"] == "fixtures/dreams_memory_safety_certificate.json"
-    assert policy_gate["fixture"] == "fixtures/policy_invariance.json"
+    assert cert_gate["fixture"] == "package:fixtures/dreams_memory_safety_certificate.json"
+    assert policy_gate["fixture"] == "package:fixtures/policy_invariance.json"
     assert "/Users/" not in str(cert_gate["fixture"])
     assert "/Users/" not in str(policy_gate["fixture"])
 
@@ -37,6 +37,6 @@ def test_validation_main_emits_public_report(capsys) -> None:
     validation.main()
 
     report = json.loads(capsys.readouterr().out)
-    assert report["certificate_fixture"]["fixture"] == "fixtures/dreams_memory_safety_certificate.json"
-    assert report["policy_invariance"]["fixture"] == "fixtures/policy_invariance.json"
+    assert report["certificate_fixture"]["fixture"] == "package:fixtures/dreams_memory_safety_certificate.json"
+    assert report["policy_invariance"]["fixture"] == "package:fixtures/policy_invariance.json"
     assert report["stdio_smoke"]["alive_for_1s"] is True

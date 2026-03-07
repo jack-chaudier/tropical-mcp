@@ -54,6 +54,8 @@ source .venv/bin/activate
 uv pip install -e '.[dev]'
 ```
 
+Built artifacts are validated too: the packaged wheel now ships the public golden fixtures used by `tropical-mcp-full-validate`, so installed-artifact checks match source-checkout checks.
+
 ## License Boundary
 
 This repository is currently **source-available for evaluation**.
@@ -167,8 +169,9 @@ uv run tropical-mcp-telemetry --limit 25
 ```bash
 uv run --extra dev ruff check .
 uv run --extra dev mypy src/tropical_mcp
-uv run --extra dev pytest -q
+uv run --extra dev pytest
 uv build
+./scripts/validate_installed_wheel.sh
 uv run tropical-mcp-full-validate
 ```
 
@@ -200,8 +203,14 @@ Temporary compatibility aliases remain for one release cycle:
 ## Project Signals
 
 - CI on push and pull request: lint, type-check, tests, build, and functional validation
+- Installed-artifact validation: `./scripts/validate_installed_wheel.sh`
+- Research showcase and launch updates: [`dreams`](https://github.com/jack-chaudier/dreams) and <https://x.com/J_C_Gaffney>
+- Citation metadata: [`CITATION.cff`](./CITATION.cff)
 - Client configuration guide: [`docs/configuration.md`](./docs/configuration.md)
 - Full usage guide: [`docs/GUIDE.md`](./docs/GUIDE.md)
+- Maintainer map: [`docs/MAINTAINER_MAP.md`](./docs/MAINTAINER_MAP.md)
+- Release checklist: [`docs/RELEASE.md`](./docs/RELEASE.md)
 - Contribution guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
+- Code of conduct: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
 - Security policy: [`SECURITY.md`](./SECURITY.md)
 - Version history: [`CHANGELOG.md`](./CHANGELOG.md)

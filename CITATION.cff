@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+title: "tropical-mcp"
+message: "If you use this software, cite the preferred citation below and the repository metadata here."
+type: software
+authors:
+  - given-names: Jack Chaudier
+    family-names: Gaffney
+    email: jackgaff@umich.edu
+    affiliation: University of Michigan
+    orcid: "https://orcid.org/0009-0000-5376-2090"
+repository-code: "https://github.com/jack-chaudier/tropical-mcp"
+url: "https://github.com/jack-chaudier/tropical-mcp"
+version: 0.2.0
+date-released: "2026-03-06"
+keywords:
+  - mcp
+  - context-compaction
+  - validity-mirage
+  - ai-safety
+  - llm-evaluation
+preferred-citation:
+  type: article
+  title: "Validity Mirage: Context Compression Failure Modes in LLMs"
+  authors:
+    - given-names: Jack Chaudier
+      family-names: Gaffney
+      email: jackgaff@umich.edu
+      affiliation: University of Michigan
+      orcid: "https://orcid.org/0009-0000-5376-2090"
+  doi: 10.5281/zenodo.18794293
+  url: "https://doi.org/10.5281/zenodo.18794293"
+  publisher: Zenodo
+  year: 2026
+abstract: >-
+  Source-available MCP server for guarded context compaction in Codex,
+  Claude Code, and similar tool-calling clients. The package exposes
+  auditable compaction, inspection, and certificate tools used by the
+  MirageKit research program.

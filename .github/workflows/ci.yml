@@ -32,6 +32,9 @@ jobs:
       - name: Build package
         run: uv build
 
+      - name: Installed wheel validation
+        run: ./scripts/validate_installed_wheel.sh
+
       - name: Functional validation
         run: uv run tropical-mcp-full-validate
 

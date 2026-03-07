@@ -60,7 +60,7 @@ Real conversations often have the pivot first ("Build me X") then constraints la
 
 Do NOT summarize multiple messages into one synthetic blob. Each user message that contains a constraint is its own chunk with its own `id`. The algebra can only protect what it sees — if you collapse 5 constraint messages into 1 synthetic summary, k_max_feasible will be 1 instead of 5.
 
-**Measured**: lazy 2-message tagging = k=1; proper 6-message tagging = k=3.
+**Internal case-study note**: lazy 2-message tagging = k=1; proper 6-message tagging = k=3.
 
 ## Context Anchoring
 
@@ -108,6 +108,8 @@ Example:
 ```
 
 ## Stress Test Results
+
+These numbers are internal case-study notes that motivated the public release. The public, inspectable witness and archived evidence live in `dreams/results/`, `dreams/site/evidence.html`, and the flagship working paper.
 
 ### PennyTree (Python novel writer, ~931 tool calls)
 - k stuck at 0-1 (98%) due to lazy tagging

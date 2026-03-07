@@ -24,8 +24,9 @@ uv pip install -e .[dev]
 ```bash
 uv run --extra dev ruff check .
 uv run --extra dev mypy src/tropical_mcp
-uv run --extra dev pytest -q
+uv run --extra dev pytest
 uv build
+./scripts/validate_installed_wheel.sh
 uv run tropical-mcp-full-validate
 ```
 
@@ -39,3 +40,4 @@ Use structured logging to `stderr` only.
 - Keep tool semantics backward compatible where possible.
 - Add/adjust tests for any behavior change.
 - Update README, docs, and CHANGELOG in the same PR when behavior changes.
+- Use [`docs/RELEASE.md`](./docs/RELEASE.md) when a change affects tags, packaged artifacts, or the mirrored public evidence in `dreams`.

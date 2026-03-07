@@ -8,6 +8,8 @@ Codex supports named `mcp_servers` tables, a project-scoped `.codex/config.toml`
 
 Project-scoped `.codex/config.toml`
 
+The example below intentionally omits `approval_policy` and `sandbox_mode` so it does not overwrite a user's local security posture by copy-paste. Add those locally only if you want a project-specific override.
+
 ```toml
 [mcp_servers.tropical-mcp]
 command = "uv"
@@ -46,7 +48,7 @@ Migration checklist
 2. Add `tropical-mcp` with `TROPICAL_MCP_CLIENT=codex`.
 3. Call `runtime_info()`, `diagnose(...)`, `context_anchor(...)`, `compact_auto(...)`, `certificate(...)`, and `telemetry_summary(...)`.
 4. Only after the smoke succeeds, run `codex mcp remove tropical-compactor`.
-5. Keep the deprecated `tropical-compactor*` command aliases only as a temporary bridge for one release cycle.
+5. Keep the deprecated `tropical-compactor*` command aliases only as a temporary bridge through `v0.2.x`; remove them before `v0.3.0`.
 
 ## Claude Code
 
