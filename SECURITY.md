@@ -4,7 +4,7 @@
 
 If you believe you found a security issue in `tropical-mcp`, please report it privately:
 
-- Email: `jackchaudier@gmail.com`
+- Email: `jackgaff@umich.edu`
 - Subject: `tropical-mcp security report`
 
 Please include:

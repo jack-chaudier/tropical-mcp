@@ -50,6 +50,9 @@ def test_codex_docs_reference_current_registration_flow() -> None:
     assert "[mcp_servers.tropical-mcp]" in readme
     assert "codex mcp add tropical-mcp" in readme
     assert "codex mcp list" in readme
+    assert ".codex/config.toml" in readme
+    assert "~/.codex/config.toml" not in readme
+    assert ".codex/config.toml" in config_doc
     assert "runtime_info()" in config_doc
     assert "diagnose(...)" in config_doc
     assert "does not replace Codex's internal compactor automatically" in config_doc

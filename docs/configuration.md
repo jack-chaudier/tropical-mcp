@@ -4,7 +4,7 @@
 
 ## Codex
 
-Codex supports named `mcp_servers` tables, project-scoped config, `experimental_compact_prompt_file`, `model_auto_compact_token_limit`, and per-server timeouts.
+Codex supports named `mcp_servers` tables, a project-scoped `.codex/config.toml`, `experimental_compact_prompt_file`, `model_auto_compact_token_limit`, and per-server timeouts.
 
 Project-scoped `.codex/config.toml`
 

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
+import sys
+
 from tropical_mcp.benchmark_harness import (
     DEFAULT_LAYOUTS,
     build_variant_messages,
+    main,
     run_replay,
     summarize_rows,
 )
@@ -37,3 +41,31 @@ def test_l2_guarded_beats_recency_on_primary_at_high_compression() -> None:
     by_policy = {row["policy"]: row for row in summary}
 
     assert by_policy["l2_guarded"]["pivot_preservation_rate"] >= by_policy["recency"]["pivot_preservation_rate"]
+
+
+def test_replay_cli_writes_expected_bundle(tmp_path, monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "tropical-mcp-replay",
+            "--fractions",
+            "1.0",
+            "--policies",
+            "recency",
+            "--k",
+            "1",
+            "--line-count",
+            "40",
+            "--output-dir",
+            str(tmp_path),
+        ],
+    )
+
+    main()
+
+    out = capsys.readouterr().out
+    assert "replay_summary.json" in out
+    summary = json.loads((tmp_path / "replay_summary.json").read_text(encoding="utf-8"))
+    assert "summary" in summary
+    assert len(summary["summary"]) == 1

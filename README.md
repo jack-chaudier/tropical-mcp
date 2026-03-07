@@ -55,15 +55,15 @@ uv pip install -e '.[dev]'
 
 This repository is currently **source-available for evaluation**.
 
-You may clone, install, run, and reproduce the unmodified repository for academic research, peer review, and internal evaluation. Public redistribution, derivative works, hosted-service use, and commercial production use require prior written consent.
+You may clone, install, run, reproduce, and create private local modifications to this repository for academic research, peer review, internal evaluation, and preparation of upstream patches. Public redistribution, hosted-service use, and commercial production use still require prior written consent.
 
 See [`LICENSE`](./LICENSE) for the full terms. For broader rights, contact `jackgaff@umich.edu`.
 
 ## Codex Quick-Start
 
-Project-scoped config:
+Project-scoped config file:
 
-`~/.codex/config.toml`
+`.codex/config.toml`
 
 ```toml
 [mcp_servers.tropical-mcp]

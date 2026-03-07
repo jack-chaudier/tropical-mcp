@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+### Changed
+
+- Clarified the evaluation license boundary so private local modifications and upstream patch submission are explicitly allowed without implying redistribution rights
+- Unified public contact details on the README, package metadata, and security surface
+- Hardened telemetry handling to warn on write failures instead of failing silently
+- Sanitized validation fixture references so public artifacts no longer leak maintainer-local absolute paths
+- Expanded tests and CI smoke coverage for replay and compatibility CLI entrypoints
+
 ## [0.2.0] - 2026-03-06
 
 ### Added

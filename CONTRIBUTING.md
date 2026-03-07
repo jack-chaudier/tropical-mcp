@@ -2,6 +2,15 @@
 
 Thanks for contributing to `tropical-mcp`.
 
+## Contribution boundary
+
+This repository is source-available for evaluation, not an open-source fork-and-redistribute project.
+
+- Pull requests and patch proposals to the canonical repository are welcome.
+- Private local modifications are allowed for internal evaluation and for preparing upstream patches.
+- Submitting a PR does not grant permission to redistribute modified copies outside the canonical repository.
+- If you need broader derivative, redistribution, or production rights, contact `jackgaff@umich.edu`.
+
 ## Development setup
 
 ```bash

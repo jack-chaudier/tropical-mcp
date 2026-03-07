@@ -35,6 +35,14 @@ jobs:
       - name: Functional validation
         run: uv run tropical-mcp-full-validate
 
+      - name: Replay CLI smoke
+        run: uv run tropical-mcp-replay --fractions 1.0 --policies recency,l2_guarded --k 3 --line-count 80 --output-dir artifacts/ci-replay
+
+      - name: Compatibility alias smoke
+        run: |
+          uv run tropical-compactor-replay --fractions 1.0 --policies recency --k 1 --line-count 40 --output-dir artifacts/ci-compat-replay
+          uv run tropical-compactor-full-validate > /dev/null
+
   compatibility:
     runs-on: ubuntu-latest
     strategy:

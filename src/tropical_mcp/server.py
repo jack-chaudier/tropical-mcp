@@ -107,8 +107,14 @@ def _log_telemetry(
         os.makedirs(os.path.dirname(settings.telemetry_path), exist_ok=True)
         with open(settings.telemetry_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(record) + "\n")
-    except Exception:
-        pass  # Telemetry must never break tool execution
+    except Exception as exc:
+        path = None
+        if "settings" in locals():
+            path = settings.telemetry_path
+        if path:
+            log.warning("Telemetry write skipped for %s: %s", path, exc)
+        else:
+            log.warning("Telemetry write skipped: %s", exc)
 
 
 def _message_text(msg: dict[str, Any]) -> str:

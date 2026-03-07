@@ -5,7 +5,7 @@ description = "Source-available MCP server for guarded context compaction in Cod
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
-authors = [{ name = "Jack Chaudier Gaffney", email = "jackchaudier@gmail.com" }]
+authors = [{ name = "Jack Chaudier Gaffney", email = "jackgaff@umich.edu" }]
 dependencies = [
   "mcp[cli]>=1.2.0",
   "tiktoken>=0.7.0",

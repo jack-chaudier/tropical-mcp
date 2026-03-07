@@ -84,7 +84,7 @@ This "launders" critical context into recent messages so it survives recency-bas
 
 ## Client Boundaries
 
-- Codex: supported pattern is project-scoped config + explicit MCP tool calls + compact prompt override + durable memory files.
+- Codex: supported pattern is a project-scoped `.codex/config.toml` + explicit MCP tool calls + compact prompt override + durable memory files.
 - Claude Code: supported pattern is explicit MCP tool calls plus compact guidance in the client.
 - Neither client is intercepted automatically by this package; it does not replace the host's internal compactor.
 
