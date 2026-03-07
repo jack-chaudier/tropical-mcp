@@ -55,4 +55,6 @@ def test_codex_docs_reference_current_registration_flow() -> None:
     assert ".codex/config.toml" in config_doc
     assert "runtime_info()" in config_doc
     assert "diagnose(...)" in config_doc
+    assert "context_anchor(...)" in config_doc
+    assert "telemetry_summary(...)" in config_doc
     assert "does not replace Codex's internal compactor automatically" in config_doc

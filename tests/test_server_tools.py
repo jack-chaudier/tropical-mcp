@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import json
+
 from tropical_mcp.compactor import token_count
 from tropical_mcp.server import (
+    certificate,
     compact,
     compact_auto,
+    context_anchor,
     diagnose,
     inspect,
     inspect_horizon,
     messages_to_chunks,
     retention_floor,
     tag,
+    telemetry_summary,
 )
 
 MESSAGES = [
@@ -138,6 +143,31 @@ def test_inspect_horizon_reports_feasible_slots() -> None:
     assert out["k_max_feasible"] == 2
     assert out["feasible_slots"] == [0, 1, 2]
     assert len(out["slots"]) == 4
+
+
+def test_context_anchor_returns_paste_ready_anchor() -> None:
+    out = context_anchor(MESSAGES, k=2)
+
+    assert "error" not in out
+    assert out["pivot_id"] == "m2"
+    assert out["predecessor_ids"] == ["m1", "m3"]
+    assert out["protected_ids"] == ["m2", "m1", "m3"]
+    assert out["k_selected"] == 2
+    assert out["k_max_feasible"] == 2
+    assert out["recommended_next_step"]["tool"] == "compact_auto"
+    assert out["recommended_next_step"]["arguments"]["k_target"] == 2
+    assert "Context anchor" in out["anchor_text"]
+    assert "Objective:" in out["anchor_text"]
+    assert "Constraints to preserve:" in out["anchor_text"]
+
+
+def test_context_anchor_falls_back_to_best_available_witness() -> None:
+    out = context_anchor(MESSAGES, k=4)
+
+    assert "error" not in out
+    assert out["k_selected"] == 2
+    assert out["feasible_requested"] is False
+    assert out["notes"]
 
 
 def test_compact_auto_adaptive_selects_highest_feasible_k() -> None:
@@ -294,3 +324,48 @@ def test_pivot_first_with_interleaved_noise_still_feasible() -> None:
     # With semantic reordering, k=2 should be feasible.
     assert out["k_max_feasible"] is not None
     assert out["k_max_feasible"] >= 1  # At minimum one predecessor chain
+
+
+def test_telemetry_summary_uses_latest_run_and_reports_recent_tools(monkeypatch, tmp_path) -> None:
+    telemetry_path = tmp_path / "telemetry.jsonl"
+    monkeypatch.setenv("TROPICAL_MCP_CLIENT", "codex")
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex-home"))
+    monkeypatch.setenv("TROPICAL_MCP_ENABLE_TELEMETRY", "1")
+    monkeypatch.setenv("TROPICAL_MCP_TELEMETRY_PATH", str(telemetry_path))
+
+    runtime = telemetry_summary(limit=20)
+    assert runtime["error"].startswith("No telemetry file found")
+
+    inspect(MESSAGES, k=2)
+    context_anchor(MESSAGES, k=2)
+    certificate(MESSAGES, token_budget=40, k=2)
+
+    summary = telemetry_summary(limit=20)
+
+    assert summary["scope"] == "latest_run"
+    assert isinstance(summary["run_id"], str)
+    assert summary["tool_counts"]["inspect"] >= 1
+    assert summary["tool_counts"]["context_anchor"] == 1
+    assert summary["tool_counts"]["certificate"] == 1
+    assert summary["latest_pivot_id"] == "m2"
+    assert summary["matched_records"] >= 3
+    assert summary["recent_records"][-1]["tool"] == "certificate"
+
+
+def test_certificate_telemetry_includes_context_fields(monkeypatch, tmp_path) -> None:
+    telemetry_path = tmp_path / "telemetry.jsonl"
+    monkeypatch.setenv("TROPICAL_MCP_CLIENT", "codex")
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex-home"))
+    monkeypatch.setenv("TROPICAL_MCP_ENABLE_TELEMETRY", "1")
+    monkeypatch.setenv("TROPICAL_MCP_TELEMETRY_PATH", str(telemetry_path))
+
+    certificate(MESSAGES, token_budget=40, k=2, baseline_policy="recency", guarded_policy="l2_guarded")
+
+    records = [json.loads(line) for line in telemetry_path.read_text(encoding="utf-8").splitlines()]
+    certificate_record = next(record for record in reversed(records) if record["tool"] == "certificate")
+
+    assert certificate_record["pivot_id"] == "m2"
+    assert certificate_record["baseline_policy"] == "recency"
+    assert certificate_record["guarded_policy"] == "l2_guarded"
+    assert certificate_record["protected_count"] == 3
+    assert certificate_record["k_max_feasible"] == 2
