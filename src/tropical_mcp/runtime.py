@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
@@ -15,7 +16,9 @@ SUPPORTED_TOOLS = (
     "inspect",
     "inspect_horizon",
     "compact_auto",
+    "context_anchor",
     "certificate",
+    "telemetry_summary",
     "retention_floor",
     "tag",
     "diagnose",
@@ -24,6 +27,7 @@ SUPPORTED_TOOLS = (
 TELEMETRY_SCHEMA_VERSION = 1
 
 _CLAUDE_HINTS = ("CLAUDECODE", "CLAUDE_CODE", "CLAUDE_PROJECT_DIR", "CLAUDE_CONFIG_DIR")
+_PROCESS_RUN_ID = uuid.uuid4().hex
 
 
 @dataclass(frozen=True)
@@ -51,7 +55,7 @@ def resolve_runtime_settings(env: Mapping[str, str] | None = None) -> RuntimeSet
         )
         telemetry_path = str(path)
 
-    run_id = current_env.get("TROPICAL_MCP_RUN_ID") or None
+    run_id = current_env.get("TROPICAL_MCP_RUN_ID") or _PROCESS_RUN_ID
     package_version = _package_version()
 
     return RuntimeSettings(
@@ -70,6 +74,7 @@ def runtime_info_payload(settings: RuntimeSettings) -> dict[str, object]:
         "client_source": settings.client_source,
         "telemetry_enabled": settings.telemetry_enabled,
         "telemetry_path": settings.telemetry_path,
+        "run_id": settings.run_id,
         "package_version": settings.package_version,
         "supported_tools": list(SUPPORTED_TOOLS),
         "supported_policies": list(SUPPORTED_POLICIES),

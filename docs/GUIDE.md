@@ -37,14 +37,16 @@ Real conversations often have the pivot first ("Build me X") then constraints la
 
 | Tool | What it does | When to use |
 |---|---|---|
-| `runtime_info` | Show resolved client, telemetry path, and package version | First smoke check after client registration |
+| `runtime_info` | Show resolved client, run ID, telemetry path, and package version | First smoke check after client registration |
 | `diagnose` | Tag + inspect_horizon in one call | Session start (replaces separate tag + inspect) |
+| `context_anchor` | Build a paste-ready objective + constraint anchor | Before compaction or after 15+ tool calls |
 | `tag` | Classify messages as pivot/predecessor/noise | When new constraints arrive |
 | `inspect_horizon` | Show max feasible k across all slots | Every 5 tool calls; after compaction |
 | `inspect` | Check feasibility at a specific k | Before compaction; reviewing context health |
 | `compact_auto` | Auto-select best k and compress | Primary compaction entry point |
 | `compact` | Compress with a specific policy | When you need precise control |
 | `certificate` | Emit a portable memory-safety artifact | Before publishing or comparing runs |
+| `telemetry_summary` | Roll up the latest run's telemetry in one view | After a compaction or certificate sequence |
 | `retention_floor` | Estimate safe retention over H epochs | Planning compression aggressiveness |
 
 ## Tagging Best Practices
@@ -62,7 +64,7 @@ Do NOT summarize multiple messages into one synthetic blob. Each user message th
 
 ## Context Anchoring
 
-After 15+ tool calls, write a **context anchor** — a short message restating the pivot and ALL constraints as a numbered checklist. Then call `compact_auto` with `mode="adaptive"`.
+After 15+ tool calls, call `context_anchor(...)` to build a **context anchor** — a short message restating the pivot and ALL constraints as a numbered checklist. Paste the returned `anchor_text` into the conversation as a fresh message, then call `compact_auto` with `mode="adaptive"`.
 
 This "launders" critical context into recent messages so it survives recency-based auto-compaction. Don't wait until you "feel" pressure — by then it's too late.
 
@@ -77,10 +79,11 @@ This "launders" critical context into recent messages so it survives recency-bas
 ## Key Technical Notes
 
 - `compact_auto` with `mode="adaptive"` picks the best k automatically
+- `context_anchor(...)` falls back to the best feasible witness when the requested `k` is too high
 - If inspect shows `feasible: false`, lower k or add `role_hint` overrides
 - Never hardcode k — always check via `inspect_horizon`
 - All tools return `k_max_feasible` for convenient monitoring
-- Telemetry path is client-aware; use `runtime_info()` to inspect the resolved location
+- Telemetry path is client-aware; use `runtime_info()` to inspect the resolved location and active run ID
 
 ## Client Boundaries
 
@@ -92,7 +95,12 @@ This "launders" critical context into recent messages so it survives recency-bas
 
 Every tool call automatically appends to the resolved telemetry path. For Codex, the default is `${CODEX_HOME:-~/.codex}/state/tropical-mcp/telemetry.jsonl`; for Claude-style clients it remains `~/.claude/compactor-telemetry.jsonl`; otherwise it falls back to `${XDG_STATE_HOME:-~/.local/state}/tropical-mcp/telemetry.jsonl`.
 
-Current telemetry includes client/runtime details and artifact-grade fields such as policy selection, token counts, feasibility, guard reason, and pivot identity.
+Current telemetry includes client/runtime details and artifact-grade fields such as run ID, policy selection, token counts, feasibility, guard reason, and pivot identity. Use `telemetry_summary(...)` after a long run to turn the JSONL stream into a run-scoped operational report.
+
+CLI:
+```bash
+uv run tropical-mcp-telemetry --limit 25
+```
 
 Example:
 ```json

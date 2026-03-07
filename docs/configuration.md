@@ -32,20 +32,21 @@ codex mcp list
 Recommended smoke flow
 
 1. Call `runtime_info()`.
-2. Call `compact_auto(...)`.
-3. Call `certificate(...)`.
-4. Call `diagnose(...)` when you want the tagged horizon view.
-5. Confirm telemetry lands in `${CODEX_HOME:-~/.codex}/state/tropical-mcp/telemetry.jsonl`.
-6. Remove any existing `tropical-compactor` registration only after the new server passes smoke.
+2. Call `diagnose(...)`.
+3. Call `context_anchor(...)`.
+4. Call `compact_auto(...)`.
+5. Call `certificate(...)`.
+6. Call `telemetry_summary(...)`.
+7. Confirm telemetry lands in `${CODEX_HOME:-~/.codex}/state/tropical-mcp/telemetry.jsonl`.
+8. Remove any existing `tropical-compactor` registration only after the new server passes smoke.
 
 Migration checklist
 
 1. Run `codex mcp list` and confirm whether `tropical-compactor` is still registered.
 2. Add `tropical-mcp` with `TROPICAL_MCP_CLIENT=codex`.
-3. Call `runtime_info()`, `compact_auto(...)`, and `certificate(...)`.
-4. Use `diagnose(...)` if you want the tagged horizon view before switching over.
-5. Only after the smoke succeeds, run `codex mcp remove tropical-compactor`.
-6. Keep the deprecated `tropical-compactor*` command aliases only as a temporary bridge for one release cycle.
+3. Call `runtime_info()`, `diagnose(...)`, `context_anchor(...)`, `compact_auto(...)`, `certificate(...)`, and `telemetry_summary(...)`.
+4. Only after the smoke succeeds, run `codex mcp remove tropical-compactor`.
+5. Keep the deprecated `tropical-compactor*` command aliases only as a temporary bridge for one release cycle.
 
 ## Claude Code
 

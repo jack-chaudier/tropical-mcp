@@ -86,6 +86,37 @@ def test_runtime_can_disable_telemetry() -> None:
     assert settings.telemetry_path is None
 
 
+def test_runtime_generates_process_run_id_when_absent() -> None:
+    settings = resolve_runtime_settings(
+        {
+            "TROPICAL_MCP_CLIENT": "generic",
+            "TROPICAL_MCP_ENABLE_TELEMETRY": "1",
+        }
+    )
+    same_settings = resolve_runtime_settings(
+        {
+            "TROPICAL_MCP_CLIENT": "generic",
+            "TROPICAL_MCP_ENABLE_TELEMETRY": "1",
+        }
+    )
+
+    assert isinstance(settings.run_id, str)
+    assert settings.run_id
+    assert settings.run_id == same_settings.run_id
+
+
+def test_runtime_honors_explicit_run_id() -> None:
+    settings = resolve_runtime_settings(
+        {
+            "TROPICAL_MCP_CLIENT": "generic",
+            "TROPICAL_MCP_ENABLE_TELEMETRY": "1",
+            "TROPICAL_MCP_RUN_ID": "manual-run",
+        }
+    )
+
+    assert settings.run_id == "manual-run"
+
+
 def test_runtime_info_reports_shape(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("TROPICAL_MCP_CLIENT", "codex")
     monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex-home"))
@@ -97,6 +128,10 @@ def test_runtime_info_reports_shape(monkeypatch, tmp_path: Path) -> None:
     assert info["client_source"] == "explicit"
     assert info["telemetry_enabled"] is True
     assert str(info["telemetry_path"]).endswith("state/tropical-mcp/telemetry.jsonl")
+    assert isinstance(info["run_id"], str)
+    assert info["run_id"]
     assert "certificate" in info["supported_tools"]
+    assert "context_anchor" in info["supported_tools"]
+    assert "telemetry_summary" in info["supported_tools"]
     assert "runtime_info" in info["supported_tools"]
     assert "l2_guarded" in info["supported_policies"]

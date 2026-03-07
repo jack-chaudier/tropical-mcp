@@ -8,6 +8,7 @@ import logging
 import math
 import os
 import sys
+from collections import Counter, deque
 from typing import Any, cast
 
 from mcp.server.fastmcp import FastMCP
@@ -27,6 +28,141 @@ log = logging.getLogger("tropical-mcp")
 
 mcp = FastMCP("tropical-mcp")
 
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value]
+
+
+def _pivot_from_tagged_records(records: Any) -> str | None:
+    if not isinstance(records, list):
+        return None
+
+    pivots = [row for row in records if isinstance(row, dict) and row.get("role") == "pivot"]
+    if not pivots:
+        return None
+    pivot = pivots[0].get("id")
+    return str(pivot) if pivot is not None else None
+
+
+def _certificate_telemetry_projection(
+    result: dict[str, Any],
+    context: dict[str, Any],
+) -> dict[str, Any]:
+    full_context = result.get("full_context", {})
+    metadata = result.get("metadata", {})
+    metadata_context = metadata.get("full_context", {}) if isinstance(metadata, dict) else {}
+    policies = result.get("policies", {})
+
+    baseline_policy = context.get("baseline_policy")
+    guarded_policy = context.get("guarded_policy")
+
+    guarded_audit: dict[str, Any] = {}
+    if isinstance(policies, dict) and isinstance(guarded_policy, str):
+        guarded_entry = policies.get(guarded_policy, {})
+        if isinstance(guarded_entry, dict):
+            guarded_audit = guarded_entry.get("audit", {})
+            if not isinstance(guarded_audit, dict):
+                guarded_audit = {}
+
+    projection = {
+        "audit": guarded_audit,
+        "pivot_id": (full_context.get("pivot_id") if isinstance(full_context, dict) else None),
+        "k_max_feasible": (
+            metadata_context.get("k_max_feasible") if isinstance(metadata_context, dict) else None
+        ),
+        "protected_ids": (
+            _string_list(full_context.get("protected_ids")) if isinstance(full_context, dict) else []
+        ),
+        "breach_ids": _string_list(guarded_audit.get("breach_ids")),
+        "feasible": (full_context.get("feasible") if isinstance(full_context, dict) else None),
+        "baseline_policy": baseline_policy,
+        "guarded_policy": guarded_policy,
+    }
+    return projection
+
+
+def _telemetry_projection(
+    tool_name: str,
+    result: dict[str, Any] | list,
+    context: dict[str, Any] | None,
+) -> dict[str, Any]:
+    tool_context = {} if context is None else dict(context)
+    audit = result.get("audit", {}) if isinstance(result, dict) else {}
+    if not isinstance(audit, dict):
+        audit = {}
+
+    projection: dict[str, Any] = {
+        "audit": audit,
+        "pivot_id": None,
+        "k_max_feasible": (result.get("k_max_feasible") if isinstance(result, dict) else None),
+        "protected_ids": [],
+        "breach_ids": [],
+        "policy_requested": tool_context.get("policy_requested"),
+        "policy_selected": None,
+        "k_target": tool_context.get("k_target"),
+        "k_selected": (result.get("k_selected") if isinstance(result, dict) else None),
+        "token_budget": tool_context.get("token_budget"),
+        "feasible": (
+            result.get("feasible")
+            if isinstance(result, dict)
+            else None
+        ),
+        "baseline_policy": tool_context.get("baseline_policy"),
+        "guarded_policy": tool_context.get("guarded_policy"),
+    }
+
+    if projection["k_target"] is None and tool_name == "compact":
+        projection["k_target"] = tool_context.get("k_requested")
+    if projection["k_target"] is None and isinstance(result, dict):
+        projection["k_target"] = result.get("k_requested")
+    if projection["feasible"] is None and isinstance(result, dict):
+        projection["feasible"] = result.get("feasible_requested")
+
+    if isinstance(result, dict):
+        projection["pivot_id"] = result.get("pivot_id")
+        projection["protected_ids"] = _string_list(result.get("protected_ids"))
+        projection["breach_ids"] = _string_list(result.get("breach_ids"))
+
+    if isinstance(audit, dict):
+        projection["k_max_feasible"] = projection["k_max_feasible"] or audit.get("k_max_feasible")
+        projection["pivot_id"] = (
+            projection["pivot_id"] or audit.get("baseline_pivot_id") or audit.get("pivot_id")
+        )
+        if not projection["protected_ids"]:
+            projection["protected_ids"] = _string_list(audit.get("protected_ids"))
+        if not projection["breach_ids"]:
+            projection["breach_ids"] = _string_list(audit.get("breach_ids"))
+        projection["policy_requested"] = (
+            projection["policy_requested"] or audit.get("policy_requested") or audit.get("policy")
+        )
+        projection["policy_selected"] = audit.get("policy_selected") or audit.get("policy")
+        if projection["k_selected"] is None:
+            projection["k_selected"] = audit.get("k_selected")
+        if projection["k_selected"] is None and tool_name == "compact":
+            projection["k_selected"] = audit.get("k")
+        if projection["feasible"] is None:
+            projection["feasible"] = audit.get("feasible")
+
+    if projection["pivot_id"] is None and isinstance(result, list):
+        projection["pivot_id"] = _pivot_from_tagged_records(result)
+
+    if projection["pivot_id"] is None and isinstance(result, dict):
+        tagged = result.get("tagged_chunks")
+        if projection["pivot_id"] is None:
+            projection["pivot_id"] = _pivot_from_tagged_records(tagged)
+        if projection["pivot_id"] is None:
+            projection["pivot_id"] = _pivot_from_tagged_records(result.get("result"))
+
+    if tool_name == "certificate" and isinstance(result, dict):
+        projection.update(_certificate_telemetry_projection(result, tool_context))
+        projection["policy_requested"] = projection["baseline_policy"]
+        projection["policy_selected"] = projection["guarded_policy"]
+
+    return projection
+
+
 def _log_telemetry(
     tool_name: str,
     result: dict[str, Any] | list,
@@ -39,44 +175,8 @@ def _log_telemetry(
         if not settings.telemetry_enabled or settings.telemetry_path is None:
             return
 
-        audit = result.get("audit", {}) if isinstance(result, dict) else {}
-        k_max_feasible = None
-        pivot_id = None
-
-        if isinstance(result, dict):
-            k_max_feasible = result.get("k_max_feasible")
-            if audit and isinstance(audit, dict):
-                k_max_feasible = k_max_feasible or audit.get("k_max_feasible")
-                pivot_id = audit.get("baseline_pivot_id") or audit.get("pivot_id")
-            if pivot_id is None:
-                pivot_id = result.get("pivot_id")
-        if pivot_id is None and isinstance(result, list):
-            pivots = [row for row in result if isinstance(row, dict) and row.get("role") == "pivot"]
-            if pivots:
-                pivot_id = pivots[0].get("id")
-
-        protected_ids = list(audit.get("protected_ids", [])) if isinstance(audit, dict) else []
-        breach_ids = list(audit.get("breach_ids", [])) if isinstance(audit, dict) else []
-        token_budget = None if context is None else context.get("token_budget")
-        policy_requested = None if context is None else context.get("policy_requested")
-        if policy_requested is None and isinstance(audit, dict):
-            policy_requested = audit.get("policy_requested")
-        if policy_requested is None and isinstance(audit, dict):
-            policy_requested = audit.get("policy")
-
-        policy_selected = None
-        if isinstance(audit, dict):
-            policy_selected = audit.get("policy_selected") or audit.get("policy")
-
-        k_target = None if context is None else context.get("k_target")
-        if k_target is None and context is not None and tool_name == "compact":
-            k_target = context.get("k_requested")
-
-        k_selected = None
-        if isinstance(audit, dict):
-            k_selected = audit.get("k_selected")
-            if k_selected is None and tool_name == "compact":
-                k_selected = audit.get("k")
+        projection = _telemetry_projection(tool_name, result, context)
+        audit = projection["audit"]
 
         record = {
             "schema_version": TELEMETRY_SCHEMA_VERSION,
@@ -85,25 +185,25 @@ def _log_telemetry(
             "client_source": settings.client_source,
             "run_id": settings.run_id,
             "tool": tool_name,
-            "policy_requested": policy_requested,
-            "policy_selected": policy_selected,
-            "k_target": k_target,
-            "k_selected": k_selected,
-            "token_budget": token_budget,
+            "policy_requested": projection["policy_requested"],
+            "policy_selected": projection["policy_selected"],
+            "k_target": projection["k_target"],
+            "k_selected": projection["k_selected"],
+            "token_budget": projection["token_budget"],
             "tokens_before": audit.get("tokens_before") if isinstance(audit, dict) else None,
             "tokens_after": audit.get("tokens_after") if isinstance(audit, dict) else None,
             "guard_reason": audit.get("guard_reason") if isinstance(audit, dict) else None,
             "guard_effective": audit.get("guard_effective") if isinstance(audit, dict) else None,
-            "feasible": (
-                audit.get("feasible")
-                if isinstance(audit, dict)
-                else (result.get("feasible") if isinstance(result, dict) else None)
-            ),
-            "k_max_feasible": k_max_feasible,
-            "pivot_id": pivot_id,
-            "protected_count": len(protected_ids),
-            "breach_count": len(breach_ids),
+            "feasible": projection["feasible"],
+            "k_max_feasible": projection["k_max_feasible"],
+            "pivot_id": projection["pivot_id"],
+            "protected_count": len(projection["protected_ids"]),
+            "breach_count": len(projection["breach_ids"]),
         }
+        if projection.get("baseline_policy") is not None:
+            record["baseline_policy"] = projection["baseline_policy"]
+        if projection.get("guarded_policy") is not None:
+            record["guarded_policy"] = projection["guarded_policy"]
         os.makedirs(os.path.dirname(settings.telemetry_path), exist_ok=True)
         with open(settings.telemetry_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(record) + "\n")
@@ -321,6 +421,61 @@ def _audit_context(chunks: list[dict[str, Any]], k: int) -> dict[str, Any]:
         "pivot_id": (provenance.pivot_id if provenance is not None else None),
         "predecessor_ids": (list(provenance.pred_ids) if provenance is not None else []),
         "k_max_feasible": k_max_feasible,
+    }
+
+
+def _anchor_text_line(text: str, max_chars: int = 220) -> str:
+    normalized = " ".join(text.split())
+    if len(normalized) <= max_chars:
+        return normalized
+    return normalized[: max_chars - 3].rstrip() + "..."
+
+
+def _load_recent_telemetry_records(path: str, limit: int) -> tuple[list[dict[str, Any]], int]:
+    lines: deque[str] = deque(maxlen=limit)
+    invalid_lines = 0
+
+    with open(path, encoding="utf-8") as handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if line:
+                lines.append(line)
+
+    records: list[dict[str, Any]] = []
+    for line in lines:
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            invalid_lines += 1
+            continue
+
+        if isinstance(payload, dict):
+            records.append(payload)
+        else:
+            invalid_lines += 1
+
+    return records, invalid_lines
+
+
+def _latest_run_id(records: list[dict[str, Any]]) -> str | None:
+    for record in reversed(records):
+        run_id = record.get("run_id")
+        if isinstance(run_id, str) and run_id:
+            return run_id
+    return None
+
+
+def _telemetry_preview(record: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "timestamp": record.get("timestamp"),
+        "tool": record.get("tool"),
+        "run_id": record.get("run_id"),
+        "policy_selected": record.get("policy_selected"),
+        "k_target": record.get("k_target"),
+        "k_selected": record.get("k_selected"),
+        "guard_effective": record.get("guard_effective"),
+        "feasible": record.get("feasible"),
+        "pivot_id": record.get("pivot_id"),
     }
 
 
@@ -682,6 +837,100 @@ def inspect_horizon(messages: list[dict[str, Any]], k_max: int = 8) -> dict[str,
 
 
 @mcp.tool()
+def context_anchor(messages: list[dict[str, Any]], k: int = 3) -> dict[str, Any]:
+    """Build a paste-ready anchor message for the best available pivot witness."""
+
+    if k < 0:
+        return _invalid("k must be >= 0")
+
+    try:
+        chunks = messages_to_chunks(messages)
+    except ValueError as exc:
+        return _invalid(str(exc))
+
+    if not chunks:
+        return _invalid("messages must not be empty")
+
+    audit_context = _audit_context(chunks, k)
+    summary = audit_context["summary"]
+    k_max_feasible = audit_context["k_max_feasible"]
+    feasible_requested = summary.provenance[k] is not None
+
+    if feasible_requested:
+        k_selected = k
+    elif k_max_feasible is not None:
+        k_selected = int(k_max_feasible)
+    else:
+        k_selected = 0
+
+    if k_selected > summary.k or summary.provenance[k_selected] is None:
+        return _invalid("No pivot witness found. Add role_hint overrides before anchoring.")
+
+    provenance = summary.provenance[k_selected]
+    assert provenance is not None
+
+    chunk_by_id = {str(chunk["id"]): chunk for chunk in chunks}
+    predecessor_ids = [str(chunk["id"]) for chunk in chunks if str(chunk["id"]) in set(provenance.pred_ids)]
+    protected_ids = [str(provenance.pivot_id), *predecessor_ids]
+
+    pivot_chunk = chunk_by_id[str(provenance.pivot_id)]
+    checklist = [
+        {
+            "id": str(pivot_chunk["id"]),
+            "kind": "objective",
+            "text": _anchor_text_line(str(pivot_chunk["text"])),
+        }
+    ]
+    checklist.extend(
+        {
+            "id": predecessor_id,
+            "kind": "constraint",
+            "text": _anchor_text_line(str(chunk_by_id[predecessor_id]["text"])),
+        }
+        for predecessor_id in predecessor_ids
+    )
+
+    anchor_lines = [
+        "Context anchor",
+        f"Objective: {checklist[0]['text']}",
+    ]
+    if len(checklist) > 1:
+        anchor_lines.append("Constraints to preserve:")
+        for index, item in enumerate(checklist[1:], start=1):
+            anchor_lines.append(f"{index}. {item['text']}")
+    else:
+        anchor_lines.append("Constraints to preserve: none identified beyond the pivot.")
+
+    notes: list[str] = []
+    if not feasible_requested:
+        notes.append(
+            f"Requested k={k} was infeasible; anchored the best available witness at k={k_selected}."
+        )
+
+    result = {
+        "anchor_text": "\n".join(anchor_lines),
+        "checklist": checklist,
+        "pivot_id": str(provenance.pivot_id),
+        "predecessor_ids": predecessor_ids,
+        "protected_ids": protected_ids,
+        "k_requested": k,
+        "k_selected": k_selected,
+        "k_max_feasible": k_max_feasible,
+        "feasible_requested": feasible_requested,
+        "recommended_next_step": {
+            "tool": "compact_auto",
+            "arguments": {
+                "k_target": k_selected,
+                "mode": "adaptive",
+            },
+        },
+        "notes": notes,
+    }
+    _log_telemetry("context_anchor", result, context={"k_target": k, "k_selected": k_selected})
+    return result
+
+
+@mcp.tool()
 def compact_auto(
     messages: list[dict[str, Any]],
     token_budget: int = 4000,
@@ -859,7 +1108,16 @@ def certificate(
             },
         },
     }
-    _log_telemetry("certificate", result, context={"token_budget": token_budget, "k_target": k})
+    _log_telemetry(
+        "certificate",
+        result,
+        context={
+            "token_budget": token_budget,
+            "k_target": k,
+            "baseline_policy": baseline_policy,
+            "guarded_policy": guarded_policy,
+        },
+    )
     return result
 
 
@@ -1034,6 +1292,83 @@ def diagnose(messages: list[dict[str, Any]], k_max: int = 8) -> dict[str, Any]:
         "W": [round(w, 4) if math.isfinite(w) else None for w in summary.W],
     }
     _log_telemetry("diagnose", result, context={"k_target": k_max})
+    return result
+
+
+@mcp.tool()
+def telemetry_summary(limit: int = 200, run_id: str | None = None) -> dict[str, Any]:
+    """Summarize recent telemetry records for the active or requested run."""
+
+    if limit <= 0:
+        return _invalid("limit must be > 0")
+
+    settings = resolve_runtime_settings()
+    telemetry_path = settings.telemetry_path
+    if telemetry_path is None:
+        return _invalid("Telemetry is disabled for this runtime.")
+    if not os.path.exists(telemetry_path):
+        return _invalid(f"No telemetry file found at {telemetry_path}. Run a tool first.")
+
+    try:
+        records, invalid_lines = _load_recent_telemetry_records(telemetry_path, limit)
+    except OSError as exc:
+        return _invalid(f"Unable to read telemetry at {telemetry_path}: {exc}")
+
+    selected_run_id = run_id or _latest_run_id(records)
+    scope = "run_id" if run_id is not None else ("latest_run" if selected_run_id else "recent_records")
+
+    filtered_records = records
+    if selected_run_id is not None:
+        filtered_records = [record for record in records if record.get("run_id") == selected_run_id]
+
+    tool_counts = Counter(
+        str(record["tool"]) for record in filtered_records if isinstance(record.get("tool"), str)
+    )
+    policy_counts = Counter(
+        str(record["policy_selected"])
+        for record in filtered_records
+        if isinstance(record.get("policy_selected"), str) and record.get("policy_selected")
+    )
+    guard_reason_counts = Counter(
+        str(record["guard_reason"])
+        for record in filtered_records
+        if isinstance(record.get("guard_reason"), str) and record.get("guard_reason")
+    )
+    run_counts = Counter(
+        str(record["run_id"])
+        for record in records
+        if isinstance(record.get("run_id"), str) and record.get("run_id")
+    )
+
+    latest_pivot_id = None
+    for record in reversed(filtered_records):
+        pivot_id = record.get("pivot_id")
+        if isinstance(pivot_id, str) and pivot_id:
+            latest_pivot_id = pivot_id
+            break
+
+    result = {
+        "telemetry_path": telemetry_path,
+        "scope": scope,
+        "run_id": selected_run_id,
+        "loaded_records": len(records),
+        "matched_records": len(filtered_records),
+        "invalid_lines": invalid_lines,
+        "time_range": {
+            "first": (filtered_records[0].get("timestamp") if filtered_records else None),
+            "last": (filtered_records[-1].get("timestamp") if filtered_records else None),
+        },
+        "tool_counts": dict(sorted(tool_counts.items())),
+        "policy_counts": dict(sorted(policy_counts.items())),
+        "guard_reason_counts": dict(sorted(guard_reason_counts.items())),
+        "available_run_ids": [
+            {"run_id": run_key, "record_count": count}
+            for run_key, count in run_counts.most_common(5)
+        ],
+        "latest_pivot_id": latest_pivot_id,
+        "recent_records": [_telemetry_preview(record) for record in filtered_records[-10:]],
+    }
+    _log_telemetry("telemetry_summary", result, context={"k_target": None})
     return result
 
 
