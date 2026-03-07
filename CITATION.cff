@@ -10,8 +10,8 @@ authors:
     orcid: "https://orcid.org/0009-0000-5376-2090"
 repository-code: "https://github.com/jack-chaudier/tropical-mcp"
 url: "https://github.com/jack-chaudier/tropical-mcp"
-version: 0.2.0
-date-released: "2026-03-06"
+version: 0.2.1
+date-released: "2026-03-07"
 keywords:
   - mcp
   - context-compaction
