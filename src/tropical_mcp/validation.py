@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import json
-import subprocess
+import subprocess  # nosec B404 - used only for controlled local validation of the packaged server
 import sys
 import time
 from pathlib import Path
@@ -98,7 +98,7 @@ def _run_auto_and_floor_checks() -> dict[str, object]:
 
 
 def _stdio_smoke() -> dict[str, object]:
-    proc = subprocess.Popen(
+    proc = subprocess.Popen(  # nosec B603 - executes the local package entrypoint with fixed arguments
         [sys.executable, "-m", "tropical_mcp.server"],
         cwd=str(ROOT),
         stdin=subprocess.PIPE,

@@ -75,8 +75,8 @@ def capture_policy_invariance_snapshot() -> dict[str, Any]:
             )
 
     for kwargs, label in (
-        ({"token_budget": 120, "k_target": 5, "mode": "adaptive"}, "adaptive_120_k5"),
-        ({"token_budget": 60, "k_target": 5, "mode": "strict"}, "strict_60_k5"),
+        ({"token_budget": 120, "k_target": 5, "mode": "adaptive"}, "adaptive_120_k5"),  # nosec B105 - fixed budget fixture label, not a credential
+        ({"token_budget": 60, "k_target": 5, "mode": "strict"}, "strict_60_k5"),  # nosec B105 - fixed budget fixture label, not a credential
     ):
         out = compact_auto(messages, **kwargs)
         audit = out["audit"]

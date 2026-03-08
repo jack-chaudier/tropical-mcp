@@ -867,7 +867,8 @@ def context_anchor(messages: list[dict[str, Any]], k: int = 3) -> dict[str, Any]
         return _invalid("No pivot witness found. Add role_hint overrides before anchoring.")
 
     provenance = summary.provenance[k_selected]
-    assert provenance is not None
+    if provenance is None:
+        return _invalid("No pivot witness found. Add role_hint overrides before anchoring.")
 
     chunk_by_id = {str(chunk["id"]): chunk for chunk in chunks}
     predecessor_ids = [str(chunk["id"]) for chunk in chunks if str(chunk["id"]) in set(provenance.pred_ids)]
