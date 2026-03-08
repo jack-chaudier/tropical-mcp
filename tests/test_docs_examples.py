@@ -53,8 +53,12 @@ def test_codex_docs_reference_current_registration_flow() -> None:
     assert "codex mcp list" in readme
     assert ".codex/config.toml" in readme
     assert "~/.codex/config.toml" not in readme
+    assert "minimum smoke sequence" in readme
+    assert "fuller research review" in readme
     assert ".codex/config.toml" in config_doc
     assert "runtime_info()" in config_doc
+    assert "compact_auto(...)" in config_doc
+    assert "certificate(...)" in config_doc
     assert "diagnose(...)" in config_doc
     assert "context_anchor(...)" in config_doc
     assert "telemetry_summary(...)" in config_doc

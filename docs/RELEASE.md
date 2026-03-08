@@ -7,7 +7,7 @@ Use this checklist before cutting a public `tropical-mcp` release.
 1. Update `pyproject.toml` version.
 2. Add release notes to `CHANGELOG.md`.
 3. Refresh `CITATION.cff` if the release date or preferred citation context changed.
-4. Confirm `README.md`, `docs/GUIDE.md`, and `docs/configuration.md` still match the supported workflow.
+4. Confirm `README.md`, `docs/GUIDE.md`, `docs/configuration.md`, `docs/ARCHITECTURE.md`, and `docs/METHODOLOGY.md` still match the supported workflow and boundaries.
 
 ## Validation gate
 
@@ -23,11 +23,18 @@ uv run tropical-mcp-full-validate
 ./scripts/full_validation.sh
 ```
 
+## Integrity and security sweep
+
+1. Run `./scripts/update_release_checksums.sh`.
+2. Confirm `examples/codex/SHA256SUMS.txt` and `src/tropical_mcp/fixtures/SHA256SUMS.txt` changed only when their underlying files changed.
+3. Confirm examples, fixtures, docs, and logs contain no secrets or machine-local paths.
+4. Confirm the README and configuration docs still distinguish the minimum smoke flow from the fuller research workflow.
+
 ## Public artifact sync
 
 1. Regenerate the mirrored validation outputs in `dreams/results/`.
 2. If fixture refs or report shape changed, update `dreams/scripts/validate_artifacts.py`.
-3. If the replay witness changed, refresh `dreams/site/data_miragekit.json`, `dreams/site/index.html`, `dreams/site/evidence.html`, and `dreams/results/VALIDATION_SUMMARY.md`.
+3. If the replay witness or recommended workflow changed, refresh `dreams/site/data_miragekit.json`, `dreams/site/index.html`, `dreams/site/evidence.html`, and `dreams/results/VALIDATION_SUMMARY.md`.
 4. Confirm the current public version map is still correct in `dreams`.
 
 ## Final release steps

@@ -35,7 +35,8 @@ The supported pattern is:
 
 1. Register `tropical-mcp` as an MCP server in Codex, Claude Code, or a similar client.
 2. Keep compact-prompt guidance and durable memory files near the project when the host supports them.
-3. Call `runtime_info()`, `diagnose(...)`, `context_anchor(...)`, `compact_auto(...)`, `certificate(...)`, `telemetry_summary(...)`, and related tools explicitly during long runs.
+3. Use `runtime_info()`, `compact_auto(...)`, and `certificate(...)` as the minimum smoke test.
+4. For a fuller research review, extend that sequence with `diagnose(...)`, `context_anchor(...)`, and `telemetry_summary(...)`.
 
 Not supported:
 
@@ -87,7 +88,13 @@ codex mcp add tropical-mcp --env TROPICAL_MCP_CLIENT=codex -- \
 codex mcp list
 ```
 
-After registration, the recommended first sequence is:
+After registration, the minimum smoke sequence is:
+
+1. `runtime_info()`
+2. `compact_auto(...)`
+3. `certificate(...)`
+
+For a fuller research review, extend the sequence to:
 
 1. `runtime_info()`
 2. `diagnose(...)`
@@ -101,6 +108,7 @@ Use the full example bundle in [`examples/codex/`](./examples/codex/) for:
 - `config.toml`
 - `compact_prompt.md`
 - durable memory templates (`Prompt.md`, `Plan.md`, `Implement.md`, `Documentation.md`)
+- release checksum manifest (`SHA256SUMS.txt`)
 
 ## Claude Code Quick-Start
 
@@ -113,11 +121,11 @@ The same boundary applies in Claude Code: register the server, keep any durable 
 
 ## Minimal Verification Snippet
 
-This direct local smoke test exercises the same workflow you should use from the client.
+This direct local smoke test exercises the minimum verification path you should use from the client.
 
 ```bash
 uv run python - <<'PY'
-from tropical_mcp.server import certificate, compact_auto, context_anchor, runtime_info, telemetry_summary
+from tropical_mcp.server import certificate, compact_auto, runtime_info
 
 messages = [
     {"id": "goal", "role": "user", "content": "Build a long-running coding agent workflow for Codex.", "role_hint": "pivot"},
@@ -127,12 +135,54 @@ messages = [
 ]
 
 info = runtime_info()
-anchor = context_anchor(messages, k=2)
+auto = compact_auto(messages, token_budget=45, k_target=2, mode="adaptive")
+cert = certificate(messages, token_budget=45, k=2)
+
+print(info["client"], info["telemetry_path"], info["run_id"])
+print(auto["audit"]["policy_selected"], auto["audit"]["k_selected"], auto["audit"]["guard_effective"])
+print(cert["policies"]["recency"]["audit"]["dropped_ids"])
+print(cert["policies"]["l2_guarded"]["audit"]["contract_satisfied"])
+PY
+```
+
+What to expect:
+
+- `runtime_info()` resolves the client, package version, supported tools, telemetry path, and run ID.
+- `compact_auto(...)` selects `l2_guarded` on the sample and reports the chosen `k`.
+- `certificate(...)` emits a portable recency-vs-guarded artifact with kept/dropped IDs and audit flags.
+- `telemetry_path` in `runtime_info()` tells you where the run will be logged.
+
+## Recommended Research Snippet
+
+This fuller sequence keeps feasibility, anchors, compaction choice, certificate output, and telemetry visible in one pass.
+
+```bash
+uv run python - <<'PY'
+from tropical_mcp.server import (
+    certificate,
+    compact_auto,
+    context_anchor,
+    diagnose,
+    runtime_info,
+    telemetry_summary,
+)
+
+messages = [
+    {"id": "goal", "role": "user", "content": "Build a long-running coding agent workflow for Codex.", "role_hint": "pivot"},
+    {"id": "constraint_stdio", "role": "user", "content": "Use stdio transport and never emit JSON-RPC data to stdout logs.", "role_hint": "predecessor"},
+    {"id": "constraint_clients", "role": "user", "content": "Support Codex and Claude-style clients through explicit MCP tool calls.", "role_hint": "predecessor"},
+    {"id": "status", "role": "assistant", "content": "I am wiring the verification flow and docs.", "role_hint": "noise"},
+]
+
+info = runtime_info()
+diagnosis = diagnose(messages, k_max=2)
+anchor = context_anchor(messages, k=0)
 auto = compact_auto(messages, token_budget=45, k_target=2, mode="adaptive")
 cert = certificate(messages, token_budget=45, k=2)
 summary = telemetry_summary(limit=20)
 
 print(info["client"], info["telemetry_path"], info["run_id"])
+print(diagnosis["feasible_ks"])
 print(anchor["k_selected"], anchor["anchor_text"].splitlines()[0])
 print(auto["audit"]["policy_selected"], auto["audit"]["k_selected"], auto["audit"]["guard_effective"])
 print(cert["policies"]["recency"]["audit"]["dropped_ids"])
@@ -143,10 +193,9 @@ PY
 
 What to expect:
 
-- `runtime_info()` resolves the client, package version, supported tools, telemetry path, and run ID.
-- `context_anchor(...)` emits a paste-ready objective/constraint restatement before compaction.
-- `compact_auto(...)` selects `l2_guarded` on the sample and reports the chosen `k`.
-- `certificate(...)` emits a portable recency-vs-guarded artifact with kept/dropped IDs and audit flags.
+- `diagnose(...)` shows the feasible witness horizon before you compact.
+- `context_anchor(...)` emits a paste-ready objective/constraint restatement.
+- `telemetry_summary(...)` gives you a run-scoped audit instead of relying on raw JSONL inspection.
 - `telemetry_summary(...)` rolls up the current run so you can inspect what actually happened.
 
 ## Artifacts And Telemetry
@@ -206,6 +255,10 @@ Temporary compatibility aliases remain for one release cycle:
 - Installed-artifact validation: `./scripts/validate_installed_wheel.sh`
 - Research showcase and launch updates: [`dreams`](https://github.com/jack-chaudier/dreams) and <https://x.com/J_C_Gaffney>
 - Citation metadata: [`CITATION.cff`](./CITATION.cff)
+- Artifact index: [`docs/ARTIFACT_INDEX.md`](./docs/ARTIFACT_INDEX.md)
+- Architecture notes: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
+- Methodology notes: [`docs/METHODOLOGY.md`](./docs/METHODOLOGY.md)
+- Source-of-truth map: [`docs/SOURCE_OF_TRUTH.md`](./docs/SOURCE_OF_TRUTH.md)
 - Client configuration guide: [`docs/configuration.md`](./docs/configuration.md)
 - Full usage guide: [`docs/GUIDE.md`](./docs/GUIDE.md)
 - Maintainer map: [`docs/MAINTAINER_MAP.md`](./docs/MAINTAINER_MAP.md)
