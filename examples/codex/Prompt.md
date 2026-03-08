@@ -1,4 +1,6 @@
-# Project Prompt
+# Project Prompt Template
+
+Use this file as a starting template for the durable project prompt. Replace the placeholder bullets below with the real goal, constraints, and interfaces for your task.
 
 ## Goal
 - Restate the user goal verbatim.
@@ -14,4 +16,3 @@
 
 ## External Interfaces
 - Note any public APIs, CLIs, file formats, or operational contracts affected.
-

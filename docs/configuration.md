@@ -36,7 +36,7 @@ Minimum smoke flow
 1. Call `runtime_info()`.
 2. Call `compact_auto(...)`.
 3. Call `certificate(...)`.
-4. Confirm telemetry lands in `${CODEX_HOME:-~/.codex}/state/tropical-mcp/telemetry.jsonl`.
+4. Confirm telemetry lands in `${CODEX_HOME:-~/.codex}/state/tropical-mcp/telemetry.jsonl`. The log records tool metadata, not raw conversation text.
 5. Remove any existing `tropical-compactor` registration only after the new server passes smoke.
 
 Recommended research workflow

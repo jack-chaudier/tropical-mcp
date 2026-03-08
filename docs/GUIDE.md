@@ -11,7 +11,7 @@ The constraints were in those old messages. After compaction:
 - You implement synchronous I/O because you forgot the async requirement
 - The user catches it, has to re-explain, you have to refactor
 
-This is the **validity mirage** — context looks fine, you feel fine, but critical information is gone. You cannot detect this by introspection. The only way to know is to check algebraically.
+This is the **validity mirage** — context looks fine, you feel fine, but critical information is gone. You cannot detect this reliably by introspection alone. The supported way to verify preservation is to check the witness algebraically.
 
 ## How It Works
 
@@ -60,7 +60,7 @@ Real conversations often have the pivot first ("Build me X") then constraints la
 
 Do NOT summarize multiple messages into one synthetic blob. Each user message that contains a constraint is its own chunk with its own `id`. The algebra can only protect what it sees — if you collapse 5 constraint messages into 1 synthetic summary, k_max_feasible will be 1 instead of 5.
 
-**Internal case-study note**: lazy 2-message tagging = k=1; proper 6-message tagging = k=3.
+**Internal case-study note**: in one internal trace, a lazy 2-message tagging scheme yielded k=1, while proper 6-message tagging yielded k=3.
 
 ## Context Anchoring
 
@@ -93,7 +93,7 @@ This "launders" critical context into recent messages so it survives recency-bas
 
 ## Telemetry
 
-Every tool call automatically appends to the resolved telemetry path. For Codex, the default is `${CODEX_HOME:-~/.codex}/state/tropical-mcp/telemetry.jsonl`; for Claude-style clients it remains `~/.claude/compactor-telemetry.jsonl`; otherwise it falls back to `${XDG_STATE_HOME:-~/.local/state}/tropical-mcp/telemetry.jsonl`.
+Every tool call automatically appends telemetry metadata to the resolved telemetry path. Raw conversation text is not written to this log. For Codex, the default is `${CODEX_HOME:-~/.codex}/state/tropical-mcp/telemetry.jsonl`; for Claude-style clients it remains `~/.claude/compactor-telemetry.jsonl`; otherwise it falls back to `${XDG_STATE_HOME:-~/.local/state}/tropical-mcp/telemetry.jsonl`.
 
 Current telemetry includes client/runtime details and artifact-grade fields such as run ID, policy selection, token counts, feasibility, guard reason, and pivot identity. Use `telemetry_summary(...)` after a long run to turn the JSONL stream into a run-scoped operational report.
 
@@ -120,4 +120,4 @@ These numbers are internal case-study notes that motivated the public release. T
 - k climbed to 4 with proper tagging before first compaction
 - k collapsed to 1 after auto-compaction (continuation summary blob)
 - Acid test after 2 compactions: only 3/7 prompts recalled (lost foundational constraints)
-- Proves: compactor is needed most DURING compaction events, which is when it's hardest to invoke
+- This suggests the compactor is most valuable during compaction events, which is also when it is hardest to invoke

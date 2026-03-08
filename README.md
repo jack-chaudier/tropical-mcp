@@ -45,7 +45,7 @@ Not supported:
 
 ## Install For Evaluation
 
-Current public evaluation path: clone this repository and install from source for academic research, peer review, or internal evaluation.
+Current public evaluation path: clone this repository and install from source for academic research, peer review, or internal evaluation. Python 3.10+ is required.
 
 ```bash
 git clone https://github.com/jack-chaudier/tropical-mcp.git ~/tropical-mcp
@@ -201,7 +201,7 @@ What to expect:
 ## Artifacts And Telemetry
 
 - `runtime_info()` reports the resolved client, telemetry path, and active run ID before you rely on any tool output.
-- Every tool call appends telemetry to a client-aware JSONL path.
+- Every tool call appends telemetry metadata to a client-aware JSONL path; raw conversation text is not written to telemetry.
 - `telemetry_summary(...)` summarizes the active run by default, so the JSONL log is operational instead of opaque.
 - `certificate(...)` produces a shareable artifact that can be compared against public fixtures in `dreams/results/`.
 

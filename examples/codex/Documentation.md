@@ -1,4 +1,6 @@
-# Documentation / Audit Log
+# Documentation / Audit Log Template
+
+Use this file as a starting template for a real project log. Replace the placeholder sections below with task-specific notes.
 
 ## Current Status
 - Active milestone:
