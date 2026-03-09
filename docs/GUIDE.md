@@ -97,6 +97,8 @@ Every tool call automatically appends telemetry metadata to the resolved telemet
 
 Current telemetry includes client/runtime details and artifact-grade fields such as run ID, policy selection, token counts, feasibility, guard reason, and pivot identity. Use `telemetry_summary(...)` after a long run to turn the JSONL stream into a run-scoped operational report.
 
+Tool outputs still deserve review before you share them. `runtime_info()` can reveal local telemetry paths and run IDs, while `context_anchor(...)`, `tag(...)`, and `diagnose(...)` can echo anchor text or message previews. Treat screenshots, pasted outputs, and transcripts as sensitive until you have checked them.
+
 CLI:
 ```bash
 uv run tropical-mcp-telemetry --limit 25

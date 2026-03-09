@@ -202,6 +202,7 @@ What to expect:
 
 - `runtime_info()` reports the resolved client, telemetry path, and active run ID before you rely on any tool output.
 - Every tool call appends telemetry metadata to a client-aware JSONL path; raw conversation text is not written to telemetry.
+- Tool outputs can still expose anchor text, message previews, local telemetry paths, and run IDs. Treat screenshots, pasted outputs, and shared transcripts as review artifacts, not automatically safe-to-publish logs.
 - `telemetry_summary(...)` summarizes the active run by default, so the JSONL log is operational instead of opaque.
 - `certificate(...)` produces a shareable artifact that can be compared against public fixtures in `dreams/results/`.
 
