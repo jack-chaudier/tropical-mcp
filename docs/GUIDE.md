@@ -60,7 +60,7 @@ Real conversations often have the pivot first ("Build me X") then constraints la
 
 Do NOT summarize multiple messages into one synthetic blob. Each user message that contains a constraint is its own chunk with its own `id`. The algebra can only protect what it sees — if you collapse 5 constraint messages into 1 synthetic summary, k_max_feasible will be 1 instead of 5.
 
-**Internal case-study note**: in one internal trace, a lazy 2-message tagging scheme yielded k=1, while proper 6-message tagging yielded k=3.
+If you collapse six distinct constraint messages into one summary blob, the protected horizon can collapse from several predecessors to one. Keep the original chunk boundaries whenever possible.
 
 ## Context Anchoring
 
@@ -107,17 +107,12 @@ Example:
 {"schema_version": 1, "timestamp": "ISO8601Z", "client": "codex", "tool": "compact_auto", "policy_selected": "l2_guarded", "tokens_after": 1200, "pivot_id": "msg_42"}
 ```
 
-## Stress Test Results
+## Public Evidence Boundary
 
-These numbers are internal case-study notes that motivated the public release. The public, inspectable witness and archived evidence live in `dreams/results/`, `dreams/site/evidence.html`, and the flagship working paper.
+The public, inspectable evidence for this release lives in the MirageKit showcase and committed validation artifacts, not in private case-study traces.
 
-### PennyTree (Python novel writer, ~931 tool calls)
-- k stuck at 0-1 (98%) due to lazy tagging
-- Fixed: proper per-message tagging → k=3 instantly
-- Acid test: 13/13 constraints recalled (no compaction between constraints and test)
+Use these reviewer-visible surfaces when you want evidence you can cite directly:
 
-### Pixl (Rust pixel art editor, ~452 tool calls)
-- k climbed to 4 with proper tagging before first compaction
-- k collapsed to 1 after auto-compaction (continuation summary blob)
-- Acid test after 2 compactions: only 3/7 prompts recalled (lost foundational constraints)
-- This suggests the compactor is most valuable during compaction events, which is also when it is hardest to invoke
+- `dreams/results/replay/replay_summary.json` for the deterministic replay witness
+- `dreams/site/evidence.html` for the curated evidence dossier
+- this repository's validation commands and CI logs for software quality and packaging checks

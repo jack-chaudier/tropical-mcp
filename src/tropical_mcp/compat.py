@@ -29,7 +29,6 @@ def tropical_compactor_full_validate() -> None:
 def _warn(old_name: str, new_name: str) -> None:
     print(
         f"Deprecated alias '{old_name}' invoked; use '{new_name}' instead. "
-        "This compatibility shim will be removed after one release cycle.",
+        "This compatibility shim remains only through v0.2.x and will be removed before v0.3.0.",
         file=sys.stderr,
     )
-

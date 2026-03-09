@@ -32,7 +32,7 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://dreams-dun.vercel.app"
+Homepage = "https://github.com/jack-chaudier/tropical-mcp"
 Documentation = "https://github.com/jack-chaudier/tropical-mcp/blob/main/docs/GUIDE.md"
 Research = "https://dreams-dun.vercel.app/evidence"
 Repository = "https://github.com/jack-chaudier/tropical-mcp"

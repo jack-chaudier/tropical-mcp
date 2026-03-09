@@ -243,7 +243,7 @@ uv run tropical-mcp-replay \
 
 ## Migration Note
 
-Temporary compatibility aliases remain for one release cycle:
+Temporary compatibility aliases remain only through `v0.2.x` and will be removed before `v0.3.0`:
 
 - `tropical-compactor`
 - `tropical-compactor-replay`

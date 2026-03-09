@@ -20,8 +20,10 @@ tool_timeout_sec = 60
 
 [profiles.stress]
 model_auto_compact_token_limit = 60000
-experimental_compact_prompt_file = "examples/codex/compact_prompt.md"
+experimental_compact_prompt_file = "/absolute/path/to/tropical-mcp/examples/codex/compact_prompt.md"
 ```
+
+If you want a project-local compact prompt instead, copy `examples/codex/compact_prompt.md` into that project and point `experimental_compact_prompt_file` at the copied file.
 
 CLI registration
 
