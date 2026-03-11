@@ -1,89 +1,105 @@
 # tropical-mcp — Full Guide
 
-`tropical-mcp` is the source-available evaluation implementation of the MirageKit research program. This guide explains the supported workflow for Codex, Claude Code, and similar tool-calling clients: register the MCP, keep any compact prompt and durable memory files nearby, and call the tools explicitly. The package does not intercept a host client's internal compactor automatically.
+This guide explains how to use `tropical-mcp` to protect your task context during long AI coding sessions. It covers the problem being solved, the underlying approach, all available tools, and best practices.
+
+**Workflow summary**: Register the MCP server in your client (Codex, Claude Code, etc.), optionally keep compact-prompt and durable-memory files nearby, and call the tools explicitly. The package does not intercept the client's internal compactor automatically.
 
 ## The Problem: Validity Mirage
 
-When you work on a complex task, the user gives constraints across multiple messages. After enough turns, a host client may auto-compact and silently evict older messages using recency-like heuristics — keeping recent messages, dropping old ones.
+When you work with an AI agent on a complex task, you give constraints across many messages. After enough turns, the client silently compresses older messages to stay within its context window — typically keeping the newest messages and dropping the oldest.
 
-The constraints were in those old messages. After compaction:
-- You confidently keep building, but you've lost 3 of 7 constraints
-- You implement synchronous I/O because you forgot the async requirement
-- The user catches it, has to re-explain, you have to refactor
+Your constraints were in those older messages. After compaction:
+- The agent keeps working confidently, but it has lost 3 of 7 constraints
+- It implements synchronous I/O because the async requirement was evicted
+- You catch the drift, re-explain, and the agent has to refactor
 
-This is the **validity mirage** — context looks fine, you feel fine, but critical information is gone. You cannot detect this reliably by introspection alone. The supported way to verify preservation is to check the witness algebraically.
+This is the **validity mirage** — the context looks fine, the agent feels fine, but critical information is gone. The agent cannot detect this by introspection alone. The only reliable way to verify preservation is to check mathematically which messages survived.
 
 ## How It Works
 
-The compactor uses **tropical semiring algebra** (max-plus: T_max = (R ∪ {-∞}, max, +)) to identify which messages contain the user's task (the **pivot**) and which contain constraints the task depends on (**predecessors**). When compaction happens, it protects these messages first.
+The server classifies each message in the conversation by its role:
+- **Pivot**: The user's core task or goal (e.g., "Build me a REST API for the inventory system")
+- **Predecessor**: A constraint the task depends on (e.g., "use async I/O", "target Python 3.10")
+- **Noise**: Routine chatter, acknowledgments, or status updates that can be safely dropped
 
-### L2 Composition Rule
+It then uses **tropical semiring algebra** — a mathematical framework where "addition" is `max` and "multiplication" is `+` — to compute exactly how many predecessor constraints can be protected during compaction. This is computed algebraically rather than by heuristic search, which makes it deterministic and auditable.
+
+### The composition rule
+
+Each time a new message arrives, the protection frontier is updated:
 
 ```
 W_new[j] = max(W_prev[j], W_incoming[max(0, j - d_prev)])
 ```
 
-A pivot at slot 0 gets "lifted" to slot j by consuming j predecessors before it. The algebra propagates this automatically — no search needed.
+In plain terms: a pivot at position 0 "absorbs" predecessors as they appear. The value at position `j` represents the feasibility of protecting the pivot plus `j` predecessors. The algebra propagates this automatically — no search required.
 
 ### k_max_feasible
 
-The highest j where W[j] is finite. This tells you how many predecessor constraints can be algebraically protected. Higher = better.
+The highest `j` where the frontier `W[j]` is finite. This is the maximum number of predecessor constraints that can be algebraically protected during compaction. Higher is better — it means more of your constraints will survive.
 
-### Semantic Reordering
+### Semantic reordering
 
-Real conversations often have the pivot first ("Build me X") then constraints later ("use SQLite"). The `_semantic_reorder()` function moves post-pivot predecessors before the pivot so the algebra can count them.
+Real conversations often have the pivot first ("Build me X") followed by constraints later ("use SQLite", "keep it under 100ms"). The `_semantic_reorder()` function moves post-pivot predecessors before the pivot so the algebra can count them correctly.
 
 ## Tools Reference
 
+All tools are called explicitly through the MCP interface. The table below summarizes each tool and when to use it.
+
 | Tool | What it does | When to use |
 |---|---|---|
-| `runtime_info` | Show resolved client, run ID, telemetry path, and package version | First smoke check after client registration |
-| `diagnose` | Tag + inspect_horizon in one call | Session start (replaces separate tag + inspect) |
-| `context_anchor` | Build a paste-ready objective + constraint anchor | Before compaction or after 15+ tool calls |
-| `tag` | Classify messages as pivot/predecessor/noise | When new constraints arrive |
-| `inspect_horizon` | Show max feasible k across all slots | Every 5 tool calls; after compaction |
-| `inspect` | Check feasibility at a specific k | Before compaction; reviewing context health |
-| `compact_auto` | Auto-select best k and compress | Primary compaction entry point |
-| `compact` | Compress with a specific policy | When you need precise control |
-| `certificate` | Emit a portable memory-safety artifact | Before publishing or comparing runs |
-| `telemetry_summary` | Roll up the latest run's telemetry in one view | After a compaction or certificate sequence |
-| `retention_floor` | Estimate safe retention over H epochs | Planning compression aggressiveness |
+| `runtime_info` | Show resolved client, run ID, telemetry path, and package version | First check after client registration |
+| `diagnose` | Classify messages and show the protection frontier in one call | Session start; replaces separate `tag` + `inspect_horizon` |
+| `context_anchor` | Build a paste-ready restatement of your objective and constraints | Before compaction, or after 15+ tool calls as a safety refresh |
+| `tag` | Classify messages as pivot / predecessor / noise | When new constraints arrive mid-session |
+| `inspect_horizon` | Show the maximum feasible protection level across all slots | Periodic health check (every ~5 tool calls) |
+| `inspect` | Check whether a specific protection level `k` is feasible | Before compaction; reviewing whether constraints are safe |
+| `compact_auto` | Auto-select the best protection level and compress | **Primary compaction entry point** |
+| `compact` | Compress with a specific policy and protection level | When you need precise manual control |
+| `certificate` | Emit a portable artifact comparing policies with kept/dropped IDs | Before publishing results or comparing runs |
+| `telemetry_summary` | Roll up the current run's telemetry into a single report | After a compaction or certificate sequence |
+| `retention_floor` | Estimate safe retention over multiple compaction epochs | Planning how aggressive compression can be |
 
 ## Tagging Best Practices
 
-### Role Hints
-- `"pivot"` — the user's core task/goal
-- `"predecessor"` — constraints, errors, decisions the task depends on
-- `"noise"` — chatter, acknowledgments, routine output
+### Role hints
 
-### Critical Rule: Tag Every Message Separately
+Each message gets a `role_hint` that tells the compactor how important it is:
 
-Do NOT summarize multiple messages into one synthetic blob. Each user message that contains a constraint is its own chunk with its own `id`. The algebra can only protect what it sees — if you collapse 5 constraint messages into 1 synthetic summary, k_max_feasible will be 1 instead of 5.
+- `"pivot"` — the user's core task or goal (e.g., "Build me a REST API")
+- `"predecessor"` — a constraint, error, or decision the task depends on (e.g., "use async I/O")
+- `"noise"` — routine chatter, acknowledgments, or status updates (safe to drop)
 
-If you collapse six distinct constraint messages into one summary blob, the protected horizon can collapse from several predecessors to one. Keep the original chunk boundaries whenever possible.
+### Critical rule: tag every message separately
+
+Do NOT summarize multiple messages into one synthetic blob. Each user message that contains a constraint must be its own chunk with its own `id`. The algebra can only protect what it can see — if you collapse 5 constraint messages into 1 synthetic summary, the maximum protection level drops from 5 to 1.
+
+Keep the original message boundaries whenever possible.
 
 ## Context Anchoring
 
-After 15+ tool calls, call `context_anchor(...)` to build a **context anchor** — a short message restating the pivot and ALL constraints as a numbered checklist. Paste the returned `anchor_text` into the conversation as a fresh message, then call `compact_auto` with `mode="adaptive"`.
+After 15+ tool calls (or whenever a session is getting long), call `context_anchor(...)` to build a **context anchor** — a short message restating the pivot and all constraints as a numbered checklist. Paste the returned `anchor_text` into the conversation as a fresh message, then call `compact_auto` with `mode="adaptive"`.
 
-This "launders" critical context into recent messages so it survives recency-based auto-compaction. Don't wait until you "feel" pressure — by then it's too late.
+This moves critical context into a recent message so it survives recency-based auto-compaction even if the client compresses before you act. Don't wait until you "feel" context pressure — by then constraints may already be gone.
 
 ## Compaction Policies
 
-- `l2_guarded`: Protects pivot + k predecessors identified by L2 scan. Default for `compact_auto`.
-- `l2_iterative_guarded`: Removes chunks one at a time, re-scanning after each removal. Blocks any eviction that would reduce W[k]. Safest but slowest.
-- `recency`: Keep newest chunks only. Fallback when no feasible pivot exists.
+Three policies are available, in order of protection strength:
 
-**Rule**: `l2_guarded` beats recency whenever a feasible pivot exists. Never use plain recency if a pivot exists.
+1. **`l2_iterative_guarded`**: Removes messages one at a time, re-scanning after each removal. Blocks any eviction that would reduce the protection frontier. Safest but slowest.
+2. **`l2_guarded`**: Protects the pivot plus `k` predecessors identified by the algebra. Default for `compact_auto`. Good balance of safety and speed.
+3. **`recency`**: Keeps only the newest messages. Used as a fallback when no feasible pivot exists.
+
+**Rule of thumb**: Always prefer `l2_guarded` (or `l2_iterative_guarded`) over `recency` when a pivot exists. Plain recency will drop constraints without checking.
 
 ## Key Technical Notes
 
-- `compact_auto` with `mode="adaptive"` picks the best k automatically
-- `context_anchor(...)` falls back to the best feasible witness when the requested `k` is too high
-- If inspect shows `feasible: false`, lower k or add `role_hint` overrides
-- Never hardcode k — always check via `inspect_horizon`
-- All tools return `k_max_feasible` for convenient monitoring
-- Telemetry path is client-aware; use `runtime_info()` to inspect the resolved location and active run ID
+- `compact_auto` with `mode="adaptive"` picks the best protection level (`k`) automatically — this is the recommended default.
+- `context_anchor(...)` falls back to the best feasible level when the requested `k` is too high.
+- If `inspect` shows `feasible: false`, lower `k` or add `role_hint` overrides to your messages.
+- Never hardcode `k` — always check the current feasible range via `inspect_horizon`.
+- Most tools return `k_max_feasible` so you can monitor protection capacity as the conversation grows (`runtime_info` and `telemetry_summary` are exceptions — they do not take messages as input).
+- The telemetry path is client-aware; use `runtime_info()` to see where logs are written and the active run ID.
 
 ## Client Boundaries
 

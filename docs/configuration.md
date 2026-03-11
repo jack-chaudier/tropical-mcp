@@ -1,14 +1,14 @@
 # Client Configuration
 
-`tropical-mcp` is used through **explicit MCP tool calls**. Register the server in the client, keep any compact-prompt or durable-memory files nearby, and call the tools deliberately. For Codex specifically, this package does not replace Codex's internal compactor automatically.
+This page covers how to register and configure `tropical-mcp` in each supported client. The server is used through **explicit MCP tool calls** — it does not replace Codex's internal compactor automatically, nor any other client's.
 
 ## Codex
 
-Codex supports named `mcp_servers` tables, a project-scoped `.codex/config.toml`, `experimental_compact_prompt_file`, `model_auto_compact_token_limit`, and per-server timeouts.
+Codex supports named `mcp_servers` tables in a project-scoped `.codex/config.toml`, along with settings for compact prompts, token limits, and per-server timeouts.
 
-Project-scoped `.codex/config.toml`
+### Project-scoped config (`.codex/config.toml`)
 
-The example below intentionally omits `approval_policy` and `sandbox_mode` so it does not overwrite a user's local security posture by copy-paste. Add those locally only if you want a project-specific override.
+The example below intentionally omits `approval_policy` and `sandbox_mode` so it does not overwrite your local security posture by copy-paste. Add those locally if you want a project-specific override.
 
 ```toml
 [mcp_servers.tropical-mcp]
@@ -25,7 +25,7 @@ experimental_compact_prompt_file = "/absolute/path/to/tropical-mcp/examples/code
 
 If you want a project-local compact prompt instead, copy `examples/codex/compact_prompt.md` into that project and point `experimental_compact_prompt_file` at the copied file.
 
-CLI registration
+### CLI registration
 
 ```bash
 codex mcp add tropical-mcp --env TROPICAL_MCP_CLIENT=codex -- \
@@ -33,7 +33,7 @@ codex mcp add tropical-mcp --env TROPICAL_MCP_CLIENT=codex -- \
 codex mcp list
 ```
 
-Minimum smoke flow
+### Minimum smoke flow
 
 1. Call `runtime_info()`.
 2. Call `compact_auto(...)`.
@@ -41,7 +41,7 @@ Minimum smoke flow
 4. Confirm telemetry lands in `${CODEX_HOME:-~/.codex}/state/tropical-mcp/telemetry.jsonl`. The log records tool metadata, not raw conversation text.
 5. Remove any existing `tropical-compactor` registration only after the new server passes smoke.
 
-Recommended research workflow
+### Recommended research workflow
 
 1. Call `runtime_info()`.
 2. Call `diagnose(...)`.
@@ -51,7 +51,7 @@ Recommended research workflow
 6. Call `telemetry_summary(...)`.
 7. Confirm telemetry lands in `${CODEX_HOME:-~/.codex}/state/tropical-mcp/telemetry.jsonl`.
 
-Migration checklist
+### Migration checklist
 
 1. Run `codex mcp list` and confirm whether `tropical-compactor` is still registered.
 2. Add `tropical-mcp` with `TROPICAL_MCP_CLIENT=codex`.
