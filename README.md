@@ -1,6 +1,6 @@
 # tropical-mcp
 
-Source-available [MCP](https://modelcontextprotocol.io/) server that prevents AI coding agents from silently forgetting your requirements during long sessions.
+Source-available [MCP](https://modelcontextprotocol.io/) server that gives AI coding agents explicit tools to preserve and inspect requirements during long sessions.
 
 ## The Problem
 
@@ -169,13 +169,13 @@ messages = [
 
 info = runtime_info()
 diagnosis = diagnose(messages, k_max=2)
-anchor = context_anchor(messages, k=0)
+anchor = context_anchor(messages, k=2)
 auto = compact_auto(messages, token_budget=45, k_target=2, mode="adaptive")
 cert = certificate(messages, token_budget=45, k=2)
 summary = telemetry_summary(limit=20)
 
 print(info["client"], info["telemetry_path"], info["run_id"])
-print(diagnosis["feasible_ks"])
+print(diagnosis["feasible_slots"])
 print(anchor["k_selected"], anchor["anchor_text"].splitlines()[0])
 print(auto["audit"]["policy_selected"], auto["audit"]["k_selected"], auto["audit"]["guard_effective"])
 print(cert["policies"]["recency"]["audit"]["dropped_ids"])

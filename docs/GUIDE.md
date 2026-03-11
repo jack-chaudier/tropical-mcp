@@ -49,7 +49,7 @@ All tools are called explicitly through the MCP interface. The table below summa
 | Tool | What it does | When to use |
 |---|---|---|
 | `runtime_info` | Show resolved client, run ID, telemetry path, and package version | First check after client registration |
-| `diagnose` | Classify messages and show the protection frontier in one call | Session start; replaces separate `tag` + `inspect` |
+| `diagnose` | Classify messages and show the protection frontier in one call | Session start; replaces separate `tag` + `inspect_horizon` |
 | `context_anchor` | Build a paste-ready restatement of your objective and constraints | Before compaction, or after 15+ tool calls as a safety refresh |
 | `tag` | Classify messages as pivot / predecessor / noise | When new constraints arrive mid-session |
 | `inspect_horizon` | Show the maximum feasible protection level across all slots | Periodic health check (every ~5 tool calls) |
@@ -98,7 +98,7 @@ Three policies are available, in order of protection strength:
 - `context_anchor(...)` falls back to the best feasible level when the requested `k` is too high.
 - If `inspect` shows `feasible: false`, lower `k` or add `role_hint` overrides to your messages.
 - Never hardcode `k` — always check the current feasible range via `inspect_horizon`.
-- All tools return `k_max_feasible` so you can monitor protection capacity as the conversation grows.
+- Most tools return `k_max_feasible` so you can monitor protection capacity as the conversation grows (`runtime_info` and `telemetry_summary` are exceptions — they do not take messages as input).
 - The telemetry path is client-aware; use `runtime_info()` to see where logs are written and the active run ID.
 
 ## Client Boundaries
