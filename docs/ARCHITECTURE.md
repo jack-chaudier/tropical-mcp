@@ -1,12 +1,10 @@
 # Architecture
 
-This note describes the public `tropical-mcp` implementation boundary.
+This document describes the structure and boundaries of the `tropical-mcp` codebase. For usage instructions see [`GUIDE.md`](./GUIDE.md); for client setup see [`configuration.md`](./configuration.md).
 
 ## System boundary
 
-- `tropical-mcp` is an MCP server that exposes explicit tool calls for compaction analysis and guarded retention.
-- It does not intercept or replace a host client's internal compactor automatically.
-- The server is meant to be registered in clients such as Codex or Claude Code and then called deliberately.
+`tropical-mcp` is an MCP server that exposes explicit tool calls for compaction analysis and guarded context retention. It is registered in clients such as Codex or Claude Code and called deliberately — it does not intercept or replace a host client's internal compactor.
 
 ## Core modules
 

@@ -1,51 +1,67 @@
 # tropical-mcp
 
-Source-available MCP server for **guarded context compaction** in Codex, Claude Code, and similar tool-calling clients.
+Source-available [MCP](https://modelcontextprotocol.io/) server that prevents AI coding agents from silently forgetting your requirements during long sessions.
 
-`tropical-mcp` is the evaluation implementation for the MirageKit research program. The public research showcase, working papers, replay artifacts, and live demo live in [`dreams`](https://github.com/jack-chaudier/dreams).
+## The Problem
 
-This package addresses a long-context reliability failure mode: an agent can remain answer-valid while silently switching the governing task intent under naive memory compression. `tropical-mcp` exposes explicit MCP tools that preserve pivot-critical structure when feasible and emit auditable artifacts when they cannot.
+When you work with an AI coding agent (Codex, Claude Code, etc.) on a complex task, you give constraints across many messages: "use async I/O", "target Python 3.10", "don't break the public API". As the conversation grows, the client silently compresses older messages to stay within its context window — and your constraints can disappear with them.
+
+The agent keeps working confidently, but it has lost 3 of your 7 requirements. You catch the drift, re-explain, and the agent refactors. This is the **validity mirage**: the context looks fine, the agent feels fine, but critical information is gone.
+
+## What tropical-mcp Does
+
+`tropical-mcp` gives you explicit MCP tools to **detect and prevent** this failure mode:
+
+- **Before compaction**: inspect which constraints are protected and how many can be safely retained.
+- **During compaction**: use policies that protect your core task and its constraints instead of blindly keeping only the newest messages.
+- **After compaction**: get auditable artifacts (certificates, telemetry) that prove what was kept and what was dropped.
+
+Under the hood, the server uses [tropical semiring algebra](./docs/GUIDE.md#how-it-works) to identify which messages contain your core task ("the pivot") and which contain constraints it depends on ("predecessors"), then protects them during compression.
+
+This is the evaluation implementation for the [MirageKit](https://github.com/jack-chaudier/dreams) research program.
 
 ## Who This Is For
 
-- Researchers evaluating long-context compaction or eviction behavior.
-- Agent teams using Codex, Claude Code, or similar clients that can register an MCP server and call tools deliberately.
-- Anyone who wants checkable artifacts such as `runtime_info()`, telemetry records, and `certificate(...)` outputs instead of opaque compression behavior.
+- **Researchers** evaluating long-context compaction or eviction behavior in LLM agents.
+- **Agent teams** using Codex, Claude Code, or similar MCP-capable clients who want verifiable context management.
+- **Anyone** who wants checkable artifacts instead of opaque compression — certificates, telemetry records, and retention audits you can inspect.
 
-## What It Ships
+## Tools Overview
 
-- `compact(messages, token_budget, policy, k)`
-  - `l2_guarded` for protected pivot + predecessor retention
-  - `l2_iterative_guarded` for iterative safe-removal checks
-  - `recency` as the baseline comparison policy
-- `diagnose(...)` for a one-call tagged horizon view
-- `context_anchor(...)` for paste-ready objective + constraint anchors
-- `inspect(...)` and `inspect_horizon(...)` for feasibility and witness inspection
-- `compact_auto(...)` for adaptive `k` selection
-- `certificate(...)` for portable memory-safety artifacts
-- `telemetry_summary(...)` for run-scoped telemetry rollups
-- `runtime_info()` for client/runtime/telemetry introspection
-- `retention_floor(...)` and `tag(...)` for operational analysis and role diagnostics
+**Core compaction**
+| Tool | Purpose |
+|---|---|
+| `compact_auto(...)` | Primary entry point — auto-selects the best protection level and compresses |
+| `compact(...)` | Compress with a specific policy (`l2_guarded`, `l2_iterative_guarded`, or `recency`) |
+| `certificate(...)` | Emit a portable artifact proving what was kept/dropped across policies |
 
-## Integration Boundary
+**Inspection and diagnosis**
+| Tool | Purpose |
+|---|---|
+| `runtime_info()` | Show resolved client, run ID, telemetry path, and package version |
+| `diagnose(...)` | One-call tagged horizon view — shows feasible protection levels |
+| `inspect(...)` / `inspect_horizon(...)` | Check feasibility at a specific or maximum protection level |
+| `context_anchor(...)` | Build a paste-ready restatement of your objective and constraints |
 
-This server does **not** replace a host client's internal compactor automatically.
+**Telemetry and analysis**
+| Tool | Purpose |
+|---|---|
+| `telemetry_summary(...)` | Roll up the current run's telemetry into a single report |
+| `retention_floor(...)` | Estimate safe retention over multiple compaction epochs |
+| `tag(...)` | Classify messages as pivot / predecessor / noise |
 
-The supported pattern is:
+## How It Fits In
+
+`tropical-mcp` is registered as an MCP server alongside your client. It does **not** replace the client's internal compactor automatically — you call the tools explicitly.
 
 1. Register `tropical-mcp` as an MCP server in Codex, Claude Code, or a similar client.
-2. Keep compact-prompt guidance and durable memory files near the project when the host supports them.
+2. Optionally keep compact-prompt guidance and durable memory files near the project.
 3. Use `runtime_info()`, `compact_auto(...)`, and `certificate(...)` as the minimum smoke test.
-4. For a fuller research review, extend that sequence with `diagnose(...)`, `context_anchor(...)`, and `telemetry_summary(...)`.
+4. For deeper analysis, extend with `diagnose(...)`, `context_anchor(...)`, and `telemetry_summary(...)`.
 
-Not supported:
+## Install
 
-- automatic interception of Codex or Claude Code host compaction events
-- magical drop-in replacement of client-owned compression internals
-
-## Install For Evaluation
-
-Current public evaluation path: clone this repository and install from source for academic research, peer review, or internal evaluation. Python 3.10+ is required.
+Clone and install from source. Python 3.10+ and [uv](https://docs.astral.sh/uv/) are required.
 
 ```bash
 git clone https://github.com/jack-chaudier/tropical-mcp.git ~/tropical-mcp
@@ -55,21 +71,11 @@ source .venv/bin/activate
 uv pip install -e '.[dev]'
 ```
 
-Built artifacts are validated too: the packaged wheel now ships the public golden fixtures used by `tropical-mcp-full-validate`, so installed-artifact checks match source-checkout checks.
+> **License**: This repository is **source-available for evaluation**. You may clone, install, run, and create private modifications for research, peer review, and internal evaluation. Public redistribution and commercial production use require prior written consent. See [`LICENSE`](./LICENSE) for the full terms; contact `jackgaff@umich.edu` for broader rights.
 
-## License Boundary
+## Quick-Start: Codex
 
-This repository is currently **source-available for evaluation**.
-
-You may clone, install, run, reproduce, and create private local modifications to this repository for academic research, peer review, internal evaluation, and preparation of upstream patches. Public redistribution, hosted-service use, and commercial production use still require prior written consent.
-
-See [`LICENSE`](./LICENSE) for the full terms. For broader rights, contact `jackgaff@umich.edu`.
-
-## Codex Quick-Start
-
-Project-scoped config file:
-
-`.codex/config.toml`
+**Option A** — project-scoped config (`.codex/config.toml`):
 
 ```toml
 [mcp_servers.tropical-mcp]
@@ -80,7 +86,7 @@ startup_timeout_sec = 10
 tool_timeout_sec = 60
 ```
 
-Or register from the CLI:
+**Option B** — CLI registration:
 
 ```bash
 codex mcp add tropical-mcp --env TROPICAL_MCP_CLIENT=codex -- \
@@ -88,40 +94,28 @@ codex mcp add tropical-mcp --env TROPICAL_MCP_CLIENT=codex -- \
 codex mcp list
 ```
 
-After registration, the minimum smoke sequence is:
+After registration, the minimum smoke sequence is: `runtime_info()` → `compact_auto(...)` → `certificate(...)`.
 
-1. `runtime_info()`
-2. `compact_auto(...)`
-3. `certificate(...)`
+For a fuller research review, extend to: `runtime_info()` → `diagnose(...)` → `context_anchor(...)` → `compact_auto(...)` → `certificate(...)` → `telemetry_summary(...)`.
 
-For a fuller research review, extend the sequence to:
+See [`examples/codex/`](./examples/codex/) for a complete bundle including config, compact prompt, and durable memory templates.
 
-1. `runtime_info()`
-2. `diagnose(...)`
-3. `context_anchor(...)`
-4. `compact_auto(...)`
-5. `certificate(...)`
-6. `telemetry_summary(...)`
-
-Use the full example bundle in [`examples/codex/`](./examples/codex/) for:
-
-- `config.toml`
-- `compact_prompt.md`
-- durable memory templates (`Prompt.md`, `Plan.md`, `Implement.md`, `Documentation.md`)
-- release checksum manifest (`SHA256SUMS.txt`)
-
-## Claude Code Quick-Start
+## Quick-Start: Claude Code
 
 ```bash
 claude mcp add tropical-mcp --scope user -- \
   uv --directory /absolute/path/to/tropical-mcp run tropical-mcp
 ```
 
-The same boundary applies in Claude Code: register the server, keep any durable context files current, and call the MCP tools explicitly.
+After registration, verify the same way: `runtime_info()` → `compact_auto(...)` → `certificate(...)`.
 
-## Minimal Verification Snippet
+The same integration pattern applies — register the server and call the MCP tools explicitly. See [`docs/configuration.md`](./docs/configuration.md) for details.
 
-This direct local smoke test exercises the minimum verification path you should use from the client.
+## Verification Snippets
+
+### Minimal smoke test
+
+Run this locally to verify the install works. The four sample messages simulate a real conversation: one task ("the pivot"), two constraints ("predecessors"), and one routine status update ("noise").
 
 ```bash
 uv run python - <<'PY'
@@ -148,13 +142,12 @@ PY
 What to expect:
 
 - `runtime_info()` resolves the client, package version, supported tools, telemetry path, and run ID.
-- `compact_auto(...)` selects `l2_guarded` on the sample and reports the chosen `k`.
-- `certificate(...)` emits a portable recency-vs-guarded artifact with kept/dropped IDs and audit flags.
-- `telemetry_path` in `runtime_info()` tells you where the run will be logged.
+- `compact_auto(...)` selects `l2_guarded` on the sample and reports the chosen protection level (`k`).
+- `certificate(...)` emits a portable artifact comparing recency vs. guarded policies, with kept/dropped IDs and audit flags.
 
-## Recommended Research Snippet
+### Full research sequence
 
-This fuller sequence keeps feasibility, anchors, compaction choice, certificate output, and telemetry visible in one pass.
+This extends the smoke test with diagnosis, anchoring, and telemetry — useful for evaluating the full workflow in one pass.
 
 ```bash
 uv run python - <<'PY'
@@ -193,10 +186,9 @@ PY
 
 What to expect:
 
-- `diagnose(...)` shows the feasible witness horizon before you compact.
+- `diagnose(...)` shows the feasible protection levels before you compact.
 - `context_anchor(...)` emits a paste-ready objective/constraint restatement.
-- `telemetry_summary(...)` gives you a run-scoped audit instead of relying on raw JSONL inspection.
-- `telemetry_summary(...)` rolls up the current run so you can inspect what actually happened.
+- `telemetry_summary(...)` rolls up the current run into a single operational report.
 
 ## Artifacts And Telemetry
 
@@ -250,21 +242,14 @@ Temporary compatibility aliases remain only through `v0.2.x` and will be removed
 - `tropical-compactor-replay`
 - `tropical-compactor-full-validate`
 
-## Project Signals
+## Further Reading
 
-- CI on push and pull request: lint, type-check, tests, build, and functional validation
-- Installed-artifact validation: `./scripts/validate_installed_wheel.sh`
-- Research showcase and launch updates: [`dreams`](https://github.com/jack-chaudier/dreams) and <https://x.com/J_C_Gaffney>
-- Citation metadata: [`CITATION.cff`](./CITATION.cff)
-- Artifact index: [`docs/ARTIFACT_INDEX.md`](./docs/ARTIFACT_INDEX.md)
-- Architecture notes: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
-- Methodology notes: [`docs/METHODOLOGY.md`](./docs/METHODOLOGY.md)
-- Source-of-truth map: [`docs/SOURCE_OF_TRUTH.md`](./docs/SOURCE_OF_TRUTH.md)
-- Client configuration guide: [`docs/configuration.md`](./docs/configuration.md)
-- Full usage guide: [`docs/GUIDE.md`](./docs/GUIDE.md)
-- Maintainer map: [`docs/MAINTAINER_MAP.md`](./docs/MAINTAINER_MAP.md)
-- Release checklist: [`docs/RELEASE.md`](./docs/RELEASE.md)
-- Contribution guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
-- Code of conduct: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md)
-- Security policy: [`SECURITY.md`](./SECURITY.md)
-- Version history: [`CHANGELOG.md`](./CHANGELOG.md)
+**Using the tools**: [`docs/GUIDE.md`](./docs/GUIDE.md) · [`docs/configuration.md`](./docs/configuration.md) · [`docs/ARTIFACT_INDEX.md`](./docs/ARTIFACT_INDEX.md)
+
+**Understanding the design**: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) · [`docs/METHODOLOGY.md`](./docs/METHODOLOGY.md) · [`docs/SOURCE_OF_TRUTH.md`](./docs/SOURCE_OF_TRUTH.md)
+
+**Research and citation**: [`dreams`](https://github.com/jack-chaudier/dreams) · [`CITATION.cff`](./CITATION.cff) · <https://x.com/J_C_Gaffney>
+
+**Contributing and maintaining**: [`CONTRIBUTING.md`](./CONTRIBUTING.md) · [`docs/RELEASE.md`](./docs/RELEASE.md) · [`docs/MAINTAINER_MAP.md`](./docs/MAINTAINER_MAP.md) · [`CHANGELOG.md`](./CHANGELOG.md)
+
+**Policies**: [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) · [`SECURITY.md`](./SECURITY.md)
